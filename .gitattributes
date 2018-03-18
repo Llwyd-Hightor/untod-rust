@@ -1,0 +1,3 @@
+*.exe -text
+*.pdf -text
+* text eol=lf
