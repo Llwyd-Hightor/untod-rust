@@ -1,20 +1,50 @@
-extern crate chrono;
-// extern crate time;
-use chrono::prelude::*;
-use chrono::Duration;
-// use time::Duration;
+extern crate clap;
+use clap::{Arg, App};
 
 fn main() {
-    let xdt = Utc::now();
-    let xdo = Utc.ymd(1900,1,1).and_hms(0,0,0);
-    let xdu = xdt.signed_duration_since(xdo);
-    println!("{:?}",xdu);
-    let xsec = xdu.num_seconds();
-    let xmic = (xdu - Duration::seconds(xsec))
-        .num_microseconds()
-        .unwrap() as u64;
-    println!("{:?} {:?}",xsec,xmic);   
-    let xsec = xsec as u64;
-    let tod = format!("{:016x}",xsec * 1_000_000 + xmic);
-    println!("{} {} {}---",&tod[0..3],&tod[3..11],&tod[11..16]);
+    let matches = App::new("untod")
+        .version("0.0.1")
+        .author("Brent")
+        .about("Converts between extended TOD, Date/Time, and Perpetual Minute Clock values") 
+        .arg(Arg::with_name("ng")
+             .help("No GMT: suppress GMT result if others given")
+             .long("ng")
+             .takes_value(false))
+        .arg(Arg::with_name("pl")
+             .help("Pad Left: pad TOD with 0 on left")
+             .long("pl")
+             .takes_value(false))
+        .arg(Arg::with_name("pr")
+             .conflicts_with("pl")
+             .help("Pad Right: pad TOD with 0 on right")
+             .long("pr")
+             .takes_value(false))
+        .arg(Arg::with_name("zl")
+             .help("Local timezone: override local time")
+             .long("zl")
+             .takes_value(true)
+             .value_name("offset"))
+        .arg(Arg::with_name("za")
+             .help("Alternate timezone: specily additional timezone")
+             .long("za")
+             .takes_value(true)
+             .value_name("offset"))
+        .arg(Arg::with_name("pmc")
+             .help("Convert from Perpetual Minute Clock values")
+             .short("m")
+             .long("pmc")
+             .takes_value(false))
+        .arg(Arg::with_name("reverse")
+             .conflicts_with("pmc")
+             .help("Convert from Date/Time values")
+             .short("r")
+             .long("rev")
+             .takes_value(false))
+        .arg(Arg::with_name("values")
+             .help("Values for conversion")
+             .takes_value(true)
+             .required(true)
+             .multiple(true))
+        .get_matches();
+    println!("{:?}",matches);   
 }

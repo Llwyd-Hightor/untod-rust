@@ -5,4 +5,5 @@ authors = ["Brent Longborough <brent@longborough.org>"]
 
 [dependencies]
 chrono = "*"
-time = "*"
+clap   = "2"
+time   = "*"
