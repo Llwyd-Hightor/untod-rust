@@ -5,6 +5,7 @@ use untod::args::*;
 use untod::todinfo::*;
 extern crate chrono;
 use self::chrono::{Utc,Local,Offset};
+
 fn main() {
     let mut todwork = TodInfo{
         runtype: TodCalc::FromTod,
@@ -36,5 +37,11 @@ fn main() {
     println!("{:?}",todwork);   
     println!("{:?}",lzone);   
     let x: i32 = 2;
-    println!("{:?}",Local::now().offset().fix().local_minus_utc()+x)
+    println!("{:?}",Local::now().offset().fix().local_minus_utc()+x);
+    for a in matches.values_of("values").unwrap() {
+        match Tod::new_from_hex(a,&todwork.pad) {
+            Some(tod) => println!("{}",tod),
+            None => println!("Nothing!")
+        }
+    }
 }
