@@ -22,8 +22,8 @@ pub struct TodInfo {
     pub date:    DateTime<Utc>,
     pub pmc:     u32,
     pub gmt:     bool,
-    pub loff:    Option<i32>,
-    pub aoff:    Option<i32>,
+    pub loff:    i32,
+    pub aoff:    i32,
     pub pad:     Padding,
 }
 
