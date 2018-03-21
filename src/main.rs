@@ -13,9 +13,9 @@ fn main() {
         tod:     0,
         date:    Utc::now(),
         pmc:     0,
-        gmt:     true,
-        loff:    0,
-        aoff:    0,
+        goff:    Some(0),
+        loff:    Some(0),
+        aoff:    Some(0),
         pad:     Padding::None,
     };
     let cmdline = utargs();
@@ -31,42 +31,48 @@ fn main() {
     if cmdline.is_present("pr") {
         todwork.pad = Padding::Right;
     }
-    todwork.gmt = !cmdline.is_present("ng");
+    if cmdline.is_present("ng") {
+        todwork.goff = None;
+    };
 
     todwork.loff = match cmdline.value_of("zl") {
         None => {
             match env::var("TODL") {
                 Ok(soff) => match soff.parse::<f32>() {
-                    Ok(noff) => (60.0 * noff).round() as i32 * 60 ,
-                    _ => 0 ,
+                    Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ) ,
+                    _ => None ,
                 },
-                _ => Local::now().offset().fix().local_minus_utc() ,
+                _ => Some( Local::now().offset().fix().local_minus_utc() ) ,
             }
         },
         Some(soff) => match soff.parse::<f32>() {
-            Ok(noff) => (60.0 * noff).round() as i32 * 60 ,
-            _ => panic!(format!("Invalid offset: --zl {}",soff)) ,
-        }
+            Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ),
+            _ => { eprintln!("Invalid offset: --zl {}",soff);
+                   None }
+        },
     };
-
+    
     todwork.aoff = match cmdline.value_of("za") {
         None => {
             match env::var("TODA") {
                 Ok(soff) => match soff.parse::<f32>() {
-                    Ok(noff) => (60.0 * noff).round() as i32 * 60 ,
-                    _ => 0 ,
+                    Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ),
+                    _ => None ,
                 },
-                _ => 0,
+                _ => None,
             }
         },
         Some(soff) => match soff.parse::<f32>() {
-            Ok(noff) => (60.0 * noff).round() as i32 * 60 ,
-            _ => panic!(format!("Invalid offset: --zl {}",soff)) ,
+            Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ), 
+            _ => { eprintln!("Invalid offset: --zl {}",soff);
+                   None }
         }
     };
     
     println!("{:?}",todwork.loff);   
     println!("{:?}",todwork.aoff);
+    println!("{:?}",todwork);
+    
     // for a in cmdline.values_of("values").unwrap() {
     //     match Tod::new_from_hex(a,&todwork.pad) {
     //         Some(tod) => println!("{}",tod),
