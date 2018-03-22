@@ -10,12 +10,12 @@ use std::env;
 fn main() {
     let mut todwork = TodInfo{
         runtype: TodCalc::FromTod,
-        tod:     0,
+        tod:     Tod(0),
         date:    Utc::now(),
-        pmc:     0,
-        goff:    Some(0),
-        loff:    Some(0),
-        aoff:    Some(0),
+        pmc:     ParsDayNo(0),
+        goff:    Some(Toffset(0)),
+        loff:    Some(Toffset(0)),
+        aoff:    Some(Toffset(0)),
         pad:     Padding::None,
     };
     let cmdline = utargs();
@@ -39,14 +39,14 @@ fn main() {
         None => {
             match env::var("TODL") {
                 Ok(soff) => match soff.parse::<f32>() {
-                    Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ) ,
+                    Ok(noff) => Some( Toffset((60.0 * noff).round() as i32 * 60) ),
                     _ => None ,
                 },
-                _ => Some( Local::now().offset().fix().local_minus_utc() ) ,
+                _ => Some( Toffset(Local::now().offset().fix().local_minus_utc()) ) ,
             }
         },
         Some(soff) => match soff.parse::<f32>() {
-            Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ),
+            Ok(noff) => Some( Toffset((60.0 * noff).round() as i32 * 60) ),
             _ => { eprintln!("Invalid offset: --zl {}",soff);
                    None }
         },
@@ -56,21 +56,24 @@ fn main() {
         None => {
             match env::var("TODA") {
                 Ok(soff) => match soff.parse::<f32>() {
-                    Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ),
+                    Ok(noff) => Some( Toffset((60.0 * noff).round() as i32 * 60) ),
                     _ => None ,
                 },
                 _ => None,
             }
         },
         Some(soff) => match soff.parse::<f32>() {
-            Ok(noff) => Some( (60.0 * noff).round() as i32 * 60 ), 
+            Ok(noff) => Some( Toffset((60.0 * noff).round() as i32 * 60) ), 
             _ => { eprintln!("Invalid offset: --zl {}",soff);
                    None }
         }
     };
     
-    println!("{:?}",todwork.loff);   
-    println!("{:?}",todwork.aoff);
+    println!("{}",&todwork.goff.unwrap_or(Toffset(0)));   
+    println!("{}",&todwork.loff.unwrap_or(Toffset(0)));   
+    println!("{}",&todwork.aoff.unwrap_or(Toffset(0)));
+    println!("{}",todwork.pmc);   
+    println!("{}",todwork.tod);   
     println!("{:?}",todwork);
     
     // for a in cmdline.values_of("values").unwrap() {

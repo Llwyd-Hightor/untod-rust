@@ -3,30 +3,49 @@ use self::chrono::{DateTime, Utc};
 use std::fmt;
 use std::ascii::AsciiExt;
 
-#[derive(Debug)]
+#[derive(Clone,Copy,Debug,)]
 pub enum TodCalc {
     FromTod,
     FromDateTime,
     FromPMC,
 }
-#[derive(Debug)]
+#[derive(Clone,Copy,Debug,)]
 pub enum Padding {
     Left,
     Right,
     None,
 }
-#[derive(Debug)]
+#[derive(Clone,Copy,Debug,)]
 pub struct TodInfo {
     pub runtype: TodCalc,
-    pub tod:     u64,
+    pub tod:     Tod,
     pub date:    DateTime<Utc>,
-    pub pmc:     u32,
-    pub goff:    Option<i32>,
-    pub loff:    Option<i32>,
-    pub aoff:    Option<i32>,
+    pub pmc:     ParsDayNo,
+    pub goff:    Option<Toffset>,
+    pub loff:    Option<Toffset>,
+    pub aoff:    Option<Toffset>,
     pub pad:     Padding,
 }
 
+#[derive(Clone,Copy,Debug,)]
+pub struct Toffset(pub i32);
+impl fmt::Display for Toffset{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let xmm = self.0 / 60 ;
+        let xhh = xmm / 60 ;
+        return write!(f,"UTC{:+03}:{:02}",xhh,xmm-xhh*60) ;
+    }
+}
+
+#[derive(Clone,Copy,Debug,)]
+pub struct ParsDayNo(pub u32);
+impl fmt::Display for ParsDayNo{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        return write!(f,"{:08x}",self.0);
+    }
+}
+
+#[derive(Clone,Copy,Debug,)]
 pub struct Tod(pub u64);
 impl Tod{
     pub fn new(tval: u64) -> Tod {
