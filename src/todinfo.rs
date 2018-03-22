@@ -1,7 +1,10 @@
-extern crate chrono;
-use self::chrono::{DateTime, Utc};
-use std::fmt;
-use std::ascii::AsciiExt;
+extern crate clap ;
+use self::clap::ArgMatches ;
+extern crate chrono ;
+use self::chrono::{DateTime,Local,Offset,Utc,} ;
+use std::fmt ;
+use std::ascii::AsciiExt ;
+use std::env ;
 
 #[derive(Clone,Copy,Debug,)]
 pub enum TodCalc {
@@ -20,33 +23,110 @@ pub struct TodInfo {
     pub runtype: TodCalc,
     pub tod:     Tod,
     pub date:    DateTime<Utc>,
-    pub pmc:     ParsDayNo,
-    pub goff:    Option<Toffset>,
-    pub loff:    Option<Toffset>,
-    pub aoff:    Option<Toffset>,
+    pub pmc:     PerpMinuteClock,
+    pub goff:    Toffset,
+    pub loff:    Toffset,
+    pub aoff:    Toffset,
     pub pad:     Padding,
 }
+impl TodInfo {
+    fn new() -> TodInfo{
+        TodInfo{
+            runtype: TodCalc::FromTod,
+            tod:     Tod(0),
+            date:    Utc::now(),
+            pmc:     PerpMinuteClock(0),
+            goff:    Toffset(Some(0)),
+            loff:    Toffset(Some(0)),
+            aoff:    Toffset(None),
+            pad:     Padding::None,
+        }
+    } 
+    pub fn new_from_args(cmdl: ArgMatches) -> TodInfo {
+        let mut todwork = TodInfo::new() ;
+        if cmdl.is_present("reverse") {
+            todwork.runtype = TodCalc::FromDateTime ;
+        }
+        if cmdl.is_present("pmc") {
+            todwork.runtype = TodCalc::FromPMC ;
+        }
+        if cmdl.is_present("pl") {
+            todwork.pad = Padding::Left ;
+        }
+        if cmdl.is_present("pr") {
+            todwork.pad = Padding::Right ;
+        }
+        
+        todwork.loff = match cmdl.value_of("zl") {
+            None => {
+                match env::var("TODL") {
+                    Ok(soff) => match soff.parse::<f32>() {
+                        Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
+                        _ => Toffset(None) ,
+                    },
+                    _ => Toffset(Some( Local::now().offset().fix().local_minus_utc()) ) ,
+                }
+            },
+            Some(soff) => match soff.parse::<f32>() {
+                Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
+                _ => { eprintln!("Invalid offset: --zl {}",soff) ;
+                       Toffset(None) }
+            },
+        } ;
+        
+        todwork.aoff = match cmdl.value_of("za") {
+            None => {
+                match env::var("TODA") {
+                    Ok(soff) => match soff.parse::<f32>() {
+                        Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
+                        _ => Toffset(None) ,
+                    },
+                    _ => Toffset(None),
+                }
+            },
+            Some(soff) => match soff.parse::<f32>() {
+                Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
+                _ => { eprintln!("Invalid offset: --zl {}",soff) ;
+                       Toffset(None) }
+            }
+        } ;
+        
+        if cmdl.is_present("ng") {
+            if todwork.loff == Toffset(None) && todwork.aoff == Toffset(None) {
+                eprintln!("No other offsets available; --ng ignored.") ;
+            } else {
+                todwork.goff = Toffset(None) ;
+            } ;
+        } ;
+        todwork
+    }
+}
 
-#[derive(Clone,Copy,Debug,)]
-pub struct Toffset(pub i32);
+#[derive(Clone,Copy,Debug,PartialEq)]
+pub struct Toffset(pub Option<i32>) ;
 impl fmt::Display for Toffset{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let xmm = self.0 / 60 ;
-        let xhh = xmm / 60 ;
-        return write!(f,"UTC{:+03}:{:02}",xhh,xmm-xhh*60) ;
+        match self.0 {
+            None => write!(f,"No offset"),
+            Some(x) => {
+                let xmm = x / 60 ;
+                let xhh = xmm / 60 ;
+                write!(f,"UTC{:+03}:{:02}",xhh,xmm-xhh*60)
+            }
+        }
     }
 }
 
 #[derive(Clone,Copy,Debug,)]
-pub struct ParsDayNo(pub u32);
-impl fmt::Display for ParsDayNo{
+pub struct PerpMinuteClock(pub u32) ;
+impl fmt::Display for PerpMinuteClock{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        return write!(f,"{:08x}",self.0);
+        write!(f,"{:08x}",self.0)
     }
 }
 
 #[derive(Clone,Copy,Debug,)]
-pub struct Tod(pub u64);
+pub struct Tod(pub u64) ;
 impl Tod{
     pub fn new(tval: u64) -> Tod {
         Tod(tval)
@@ -64,7 +144,7 @@ impl Tod{
                     }
                 }
             } ;
-            let tval = u64::from_str_radix(&chex,16);
+            let tval = u64::from_str_radix(&chex,16) ;
             match tval {
                 Ok(n) => Some(Tod(n)),
                 _ => None
@@ -76,7 +156,7 @@ impl Tod{
 }
 impl fmt::Display for Tod{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let x = format!("{:016x}",self.0);
-        return write!(f,"{} {} {}---",&x[0..3],&x[3..11],&x[11..16]);
+        let x = format!("{:016x}",self.0) ;
+        write!(f,"{} {} {}---",&x[0..3],&x[3..11],&x[11..16])
     }
 }

@@ -1,10 +1,10 @@
-extern crate clap;
-use self::clap::{Arg, ArgMatches, App};
+extern crate clap ;
+use self::clap::{Arg, ArgMatches, App} ;
 pub fn utargs() -> ArgMatches<'static> {
     App::new("untod")
         .version("0.0.1")
         .author("Brent")
-        .about("Converts between extended TOD, Date/Time, and Perpetual Minute Clock values") 
+        .about("Converts between extended TOD, Date/Time, and Perpetual Minute Clock values")
         .arg(Arg::with_name("ng")
              .help("No GMT: suppress GMT result if others given")
              .long("ng")
@@ -45,4 +45,4 @@ pub fn utargs() -> ArgMatches<'static> {
              .required_unless_one(&["reverse", "pmc",])
              .multiple(true))
         .get_matches()
-} 
+}
