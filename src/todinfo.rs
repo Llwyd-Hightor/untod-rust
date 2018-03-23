@@ -1,10 +1,9 @@
 extern crate clap ;
 use self::clap::ArgMatches ;
 extern crate chrono ;
-use self::chrono::{DateTime,Local,Offset,Utc,} ;
+use self::chrono::{DateTime,Local,NaiveDateTime,Offset,ParseResult,Utc,} ;
 use std::fmt ;
 use std::ascii::AsciiExt ;
-use std::env ;
 
 #[derive(Clone,Copy,Debug,)]
 pub enum TodCalc {
@@ -42,7 +41,7 @@ impl TodInfo {
             pad:     Padding::None,
         }
     } 
-    pub fn new_from_args(cmdl: ArgMatches) -> TodInfo {
+    pub fn new_from_args(cmdl: &ArgMatches) -> TodInfo {
         let mut todwork = TodInfo::new() ;
         if cmdl.is_present("reverse") {
             todwork.runtype = TodCalc::FromDateTime ;
@@ -58,15 +57,7 @@ impl TodInfo {
         }
         
         todwork.loff = match cmdl.value_of("zl") {
-            None => {
-                match env::var("TODL") {
-                    Ok(soff) => match soff.parse::<f32>() {
-                        Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
-                        _ => Toffset(None) ,
-                    },
-                    _ => Toffset(Some( Local::now().offset().fix().local_minus_utc()) ) ,
-                }
-            },
+            None => Toffset(Some( Local::now().offset().fix().local_minus_utc()) ) ,
             Some(soff) => match soff.parse::<f32>() {
                 Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
                 _ => { eprintln!("Invalid offset: --zl {}",soff) ;
@@ -75,15 +66,7 @@ impl TodInfo {
         } ;
         
         todwork.aoff = match cmdl.value_of("za") {
-            None => {
-                match env::var("TODA") {
-                    Ok(soff) => match soff.parse::<f32>() {
-                        Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
-                        _ => Toffset(None) ,
-                    },
-                    _ => Toffset(None),
-                }
-            },
+            None => Toffset(None),
             Some(soff) => match soff.parse::<f32>() {
                 Ok(noff) => Toffset(Some( (60.0 * noff).round() as i32 * 60) ),
                 _ => { eprintln!("Invalid offset: --zl {}",soff) ;
@@ -98,6 +81,14 @@ impl TodInfo {
                 todwork.goff = Toffset(None) ;
             } ;
         } ;
+
+        if todwork.aoff == todwork.goff || todwork.aoff == todwork.loff {
+            todwork.aoff = Toffset(None) ;
+        }
+
+        if todwork.loff == todwork.goff {
+            todwork.loff = Toffset(None) ;
+        }
         todwork
     }
 }
@@ -111,7 +102,7 @@ impl fmt::Display for Toffset{
             Some(x) => {
                 let xmm = x / 60 ;
                 let xhh = xmm / 60 ;
-                write!(f,"UTC{:+03}:{:02}",xhh,xmm-xhh*60)
+                write!(f,"UTC{:+03}:{:02}",xhh,xmm.abs()%60)
             }
         }
     }
@@ -154,9 +145,23 @@ impl Tod{
         }
     }
 }
+
 impl fmt::Display for Tod{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let x = format!("{:016x}",self.0) ;
         write!(f,"{} {} {}---",&x[0..3],&x[3..11],&x[11..16])
     }
+}
+
+pub fn finddate(ds: String) -> ParseResult<NaiveDateTime> {
+    if ds == "NOW" {
+        NaiveDateTime::parse_from_str(&defaultdate(),"%F@%H:%M:%S%.f")
+    } else {
+        let padding = "1900-01-01@00:00:00.000000" ;
+        let x = &padding[ds.len()..] ;
+        NaiveDateTime::parse_from_str(&(ds + &x),"%F@%H:%M:%S%.f")
+    } 
+}
+pub fn defaultdate() -> String {
+    Utc::now().format("%F@%H:%M:%S%.6f").to_string()
 }
