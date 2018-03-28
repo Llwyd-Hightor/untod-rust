@@ -1,7 +1,8 @@
 extern crate clap ;
 use self::clap::ArgMatches ;
 extern crate chrono ;
-use self::chrono::{DateTime,Local,NaiveDateTime,Offset,ParseResult,Utc,} ;
+use self::chrono::{Local, NaiveDate, NaiveDateTime, Offset, ParseResult, Utc,} ;
+use std::cmp::min ;
 use std::fmt ;
 use std::ascii::AsciiExt ;
 
@@ -21,7 +22,7 @@ pub enum Padding {
 pub struct TodInfo {
     pub runtype: TodCalc,
     pub tod:     Tod,
-    pub date:    DateTime<Utc>,
+    pub date:    NaiveDateTime,
     pub pmc:     PerpMinuteClock,
     pub goff:    Toffset,
     pub loff:    Toffset,
@@ -33,7 +34,7 @@ impl TodInfo {
         TodInfo{
             runtype: TodCalc::FromTod,
             tod:     Tod(0),
-            date:    Utc::now(),
+            date:    Utc::now().naive_utc(),
             pmc:     PerpMinuteClock(0),
             goff:    Toffset(Some(0)),
             loff:    Toffset(Some(0)),
@@ -154,14 +155,43 @@ impl fmt::Display for Tod{
 }
 
 pub fn finddate(ds: String) -> ParseResult<NaiveDateTime> {
-    if ds == "NOW" {
+    let padding = "1900-01-01@00:00:00.000000" ;
+    let xlen = min(ds.len(),26) ;
+    if ds.to_uppercase() == "NOW" {
         NaiveDateTime::parse_from_str(&defaultdate(),"%F@%H:%M:%S%.f")
     } else {
-        let padding = "1900-01-01@00:00:00.000000" ;
-        let x = &padding[ds.len()..] ;
+        let x = &padding[xlen..] ;
         NaiveDateTime::parse_from_str(&(ds + &x),"%F@%H:%M:%S%.f")
     } 
 }
 pub fn defaultdate() -> String {
     Utc::now().format("%F@%H:%M:%S%.6f").to_string()
 }
+
+pub fn from_tod(a: String, todwork: &TodInfo) -> Vec::<String> {
+    let result = Vec::new() ;
+    result
+}
+pub fn from_datetime(a: String, todwork: &mut TodInfo) -> Vec::<String> {
+    let mut result = Vec::new() ;
+    let xdt = finddate(a.clone()) ;
+    let dt = match xdt {
+        Err(_) => {
+            result.push(format!("Date {} is invalid",a)) ;
+            return result ;
+        } ,
+        Ok(x) => x , 
+    } ;
+    todwork.date = dt ;
+    let micro = todwork.date.timestamp_subsec_micros() ;
+    let todbase = NaiveDate::from_ymd(1900,01,01).and_hms(0,0,0) ;
+    let seconds = todwork.date.signed_duration_since(todbase) ;
+    
+    println!("{:?}",seconds) ;
+    result
+}
+pub fn from_perpetual(a: String, todwork: &TodInfo) -> Vec::<String> {
+    let result = Vec::new() ;
+    result
+}
+

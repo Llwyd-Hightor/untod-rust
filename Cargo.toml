@@ -7,3 +7,4 @@ authors = ["Brent Longborough <brent@longborough.org>"]
 chrono = "*"
 clap   = "2"
 time   = "*"
+clipboard = "*"
