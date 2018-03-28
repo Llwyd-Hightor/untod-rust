@@ -2,6 +2,8 @@ extern crate clap;
 use self::clap::ArgMatches;
 extern crate chrono;
 use self::chrono::{Duration, Local, NaiveDate, NaiveDateTime, Offset, ParseResult, Utc,};
+extern crate clipboard;
+use self::clipboard::{ClipboardContext, ClipboardProvider,};
 use std::cmp::min;
 use std::fmt;
 use std::ascii::AsciiExt;
@@ -208,7 +210,6 @@ pub fn defaultdate() -> String {
 
 pub fn from_tod(a: String, todwork: &mut TodInfo) -> Vec<String> {
     let todbase = NaiveDate::from_ymd(1900,01,01).and_hms(0,0,0);
-    let parsbase = NaiveDate::from_ymd(1966,01,03).and_hms(0,0,0);
     let mut result: Vec<String> = Vec::new();
     let xtod = Tod::new_from_hex(&a.clone(),&todwork.pad);
     todwork.tod = match xtod {
@@ -233,46 +234,27 @@ pub fn from_tod(a: String, todwork: &mut TodInfo) -> Vec<String> {
             Some(x) => {
                 todwork.date = zdate.checked_add_signed(Duration::seconds(x as i64))
                     .expect("Couldn't convert date");
-                let pdiff = todwork.date.signed_duration_since(parsbase);
-                let mut pmin = pdiff.num_seconds() / 60;
-                if pmin >= 0 && pmin <= MAX as i64 {
-                    todwork.pmc = PerpMinuteClock(Some(pmin as u32))
-                } else {
-                    todwork.pmc = PerpMinuteClock(None)
-                }
+                todwork.pmc = findpmc(*todwork);
                 result.push(todwork.text(off));
             },
         };
     };
     result
 }
+
 pub fn from_datetime(a: String, todwork: &mut TodInfo) -> Vec<String> {
-    let todbase = NaiveDate::from_ymd(1900,01,01).and_hms(0,0,0);
-    let parsbase = NaiveDate::from_ymd(1966,01,03).and_hms(0,0,0);
     let mut result: Vec<String> = Vec::new();
     let xdt = finddate(a.clone());
-    let dt = match xdt {
+    todwork.date = match xdt {
         Err(_) => {
             result.push(format!("Date {:?} is invalid",a));
             return result;
         },
         Ok(x) => x,
     };
-    todwork.date = dt;
-    let tdiff = todwork.date.signed_duration_since(todbase);
-    let zsec = tdiff.num_seconds();
-    let zmic = (tdiff - Duration::seconds(zsec))
-        .num_microseconds()
-        .unwrap() as u64;
-    let zsec = zsec as u64;
-    let pdiff = todwork.date.signed_duration_since(parsbase);
-    let pmin = pdiff.num_seconds() / 60;
-    if pmin >= 0 && pmin <= MAX as i64 {
-        todwork.pmc = PerpMinuteClock(Some(pmin as u32))
-    } else {
-        todwork.pmc = PerpMinuteClock(None)
-    }
-
+    let (zsec, zmic) = get_sec_mic(*todwork);
+    todwork.pmc = findpmc(*todwork);
+    
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
     for off in olist {
         match off.0 {
@@ -286,7 +268,6 @@ pub fn from_datetime(a: String, todwork: &mut TodInfo) -> Vec<String> {
    result
 }
 pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
-    let todbase = NaiveDate::from_ymd(1900,01,01).and_hms(0,0,0);
     let parsbase = NaiveDate::from_ymd(1966,01,03).and_hms(0,0,0);
     let mut result: Vec<String> = Vec::new();
     todwork.pmc = PerpMinuteClock::new_from_hex(&a);
@@ -304,12 +285,7 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
         },
         Some(x) => x,
     };
-    let tdiff = todwork.date.signed_duration_since(todbase);
-    let zsec = tdiff.num_seconds();
-    let zmic = (tdiff - Duration::seconds(zsec))
-        .num_microseconds()
-        .unwrap() as u64;
-    let zsec = zsec as u64;
+    let (zsec, zmic) = get_sec_mic(*todwork);
 
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
     for off in olist {
@@ -324,3 +300,39 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
     result
 }
 
+pub fn args_or_clipboard(cmdl: &ArgMatches) -> Vec<String> {
+    let mut result: Vec<String> = Vec::new();
+    if cmdl.is_present("clipboard") {
+        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+        for item in ctx.get_contents().unwrap().split_whitespace() {
+            result.push(item.trim_matches(char::from(0)).to_string());
+        } 
+    } else {
+        for item in cmdl.values_of("values").unwrap() { 
+            result.push(item.to_string());
+        }
+    };
+    result
+}
+                
+pub fn findpmc(todwork: TodInfo) -> PerpMinuteClock {
+    let parsbase = NaiveDate::from_ymd(1966,01,03).and_hms(0,0,0);
+    let pdiff = todwork.date.signed_duration_since(parsbase);
+    let pmin = pdiff.num_seconds() / 60;
+    if pmin >= 0 && pmin <= MAX as i64 {
+        PerpMinuteClock(Some(pmin as u32))
+    } else {
+        PerpMinuteClock(None)
+    }
+}    
+                
+pub fn get_sec_mic(todwork: TodInfo) -> (u64, u64) {
+    let todbase = NaiveDate::from_ymd(1900,01,01).and_hms(0,0,0);
+    let tdiff = todwork.date.signed_duration_since(todbase);
+    let zsec = tdiff.num_seconds();
+    let zmic = (tdiff - Duration::seconds(zsec))
+        .num_microseconds()
+        .unwrap() as u64;
+    let zsec = zsec as u64;
+    (zsec, zmic)
+}    
