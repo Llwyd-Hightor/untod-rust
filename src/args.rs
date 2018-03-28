@@ -1,5 +1,5 @@
-extern crate clap ;
-use self::clap::{Arg, ArgMatches, App} ;
+extern crate clap;
+use self::clap::{Arg, ArgMatches, App};
 pub fn utargs() -> ArgMatches<'static> {
     App::new("untod")
         .version("0.0.1")
