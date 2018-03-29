@@ -31,7 +31,8 @@ pub struct TodInfo {
     pub loff:    Toffset,
     pub aoff:    Toffset,
     pub pad:     Padding,
-    pub lsec:    bool,
+    pub leap:    bool,
+    pub lsec:    i64,
     pub lstab:   LeapSecTable,
 }
 impl TodInfo {
@@ -45,7 +46,8 @@ impl TodInfo {
             loff:    Toffset(Some(0)),
             aoff:    Toffset(None),
             pad:     Padding::None,
-            lsec:    false,
+            leap:    false,
+            lsec:    0,
             lstab:   LeapSecTable::new(),
         }
     }
@@ -90,7 +92,7 @@ impl TodInfo {
             };
         };
 
-        todwork.lsec = cmdl.is_present("leapsec");
+        todwork.leap = cmdl.is_present("leapsec");
 
         if todwork.aoff == todwork.goff || todwork.aoff == todwork.loff {
             todwork.aoff = Toffset(None);
@@ -105,7 +107,11 @@ impl TodInfo {
         let odate = self.date.format("%F %H:%M:%S%.6f");
         let ojd = self.date.format("%Y.%j");
         let oday = self.date.format("%a");
-        format!("{} : {} {} {} {} {}",self.tod,odate,offset,ojd,oday,self.pmc)
+        if self.leap {
+            format!("{} : {} {} {} {} {} *{}",self.tod,odate,offset,ojd,oday,self.pmc,self.lsec)
+        } else {
+            format!("{} : {} {} {} {} {}",self.tod,odate,offset,ojd,oday,self.pmc)
+        }
     }
 }
 
@@ -159,7 +165,7 @@ impl fmt::Display for PerpMinuteClock{
 pub struct LeapSec{
     day: NaiveDate,
     tod: u64,
-    count: i32,
+    count: i64,
 }
 
 #[derive(Debug,)]
@@ -167,49 +173,55 @@ pub struct LeapSecTable(Vec<LeapSec>);
 impl LeapSecTable{
     pub fn new() -> LeapSecTable {
         LeapSecTable(vec![
-            LeapSec{day: NaiveDate::from_ymd(0000,01,01) , tod: 0x0000000000000000, count:  0},
-            LeapSec{day: NaiveDate::from_ymd(1972,07,01) , tod: 0x000820BA9811E240, count:  1},
-            LeapSec{day: NaiveDate::from_ymd(1973,01,01) , tod: 0x00082F300AEE2480, count:  2},
-            LeapSec{day: NaiveDate::from_ymd(1974,01,01) , tod: 0x00084BDE971146C0, count:  3},
-            LeapSec{day: NaiveDate::from_ymd(1975,01,01) , tod: 0x0008688D23346900, count:  4},
-            LeapSec{day: NaiveDate::from_ymd(1976,01,01) , tod: 0x0008853BAF578B40, count:  5},
-            LeapSec{day: NaiveDate::from_ymd(1977,01,01) , tod: 0x0008A1FE59520D80, count:  6},
-            LeapSec{day: NaiveDate::from_ymd(1978,01,01) , tod: 0x0008BEACE5752FC0, count:  7},
-            LeapSec{day: NaiveDate::from_ymd(1979,01,01) , tod: 0x0008DB5B71985200, count:  8},
-            LeapSec{day: NaiveDate::from_ymd(1980,01,01) , tod: 0x0008F809FDBB7440, count:  9},
-            LeapSec{day: NaiveDate::from_ymd(1981,07,01) , tod: 0x00092305C0FCD680, count: 10},
-            LeapSec{day: NaiveDate::from_ymd(1982,07,01) , tod: 0x00093FB44D1FF8C0, count: 11},
-            LeapSec{day: NaiveDate::from_ymd(1983,07,01) , tod: 0x00095C62D9431B00, count: 12},
-            LeapSec{day: NaiveDate::from_ymd(1985,07,01) , tod: 0x000995D40F517D40, count: 13},
-            LeapSec{day: NaiveDate::from_ymd(1988,01,01) , tod: 0x0009DDA69A557F80, count: 14},
-            LeapSec{day: NaiveDate::from_ymd(1990,01,01) , tod: 0x000A1717D063E1C0, count: 15},
-            LeapSec{day: NaiveDate::from_ymd(1991,01,01) , tod: 0x000A33C65C870400, count: 16},
-            LeapSec{day: NaiveDate::from_ymd(1992,07,01) , tod: 0x000A5EC21FC86640, count: 17},
-            LeapSec{day: NaiveDate::from_ymd(1993,07,01) , tod: 0x000A7B70ABEB8880, count: 18},
-            LeapSec{day: NaiveDate::from_ymd(1994,07,01) , tod: 0x000A981F380EAAC0, count: 19},
-            LeapSec{day: NaiveDate::from_ymd(1996,01,01) , tod: 0x000AC34336FECD00, count: 20},
-            LeapSec{day: NaiveDate::from_ymd(1997,07,01) , tod: 0x000AEE3EFA402F40, count: 21},
-            LeapSec{day: NaiveDate::from_ymd(1999,01,01) , tod: 0x000B1962F9305180, count: 22},
-            LeapSec{day: NaiveDate::from_ymd(2006,01,01) , tod: 0x000BE251097973C0, count: 23},
-            LeapSec{day: NaiveDate::from_ymd(2009,01,01) , tod: 0x000C3870CB9BB600, count: 24},
-            LeapSec{day: NaiveDate::from_ymd(2012,07,01) , tod: 0x000C9CC9A704D840, count: 25},
-            LeapSec{day: NaiveDate::from_ymd(2015,07,01) , tod: 0x000CF2D54B4FBA80, count: 26},
             LeapSec{day: NaiveDate::from_ymd(2017,01,01) , tod: 0x000D1E0D68173CC0, count: 27},
+            LeapSec{day: NaiveDate::from_ymd(2015,07,01) , tod: 0x000CF2D54B4FBA80, count: 26},
+            LeapSec{day: NaiveDate::from_ymd(2012,07,01) , tod: 0x000C9CC9A704D840, count: 25},
+            LeapSec{day: NaiveDate::from_ymd(2009,01,01) , tod: 0x000C3870CB9BB600, count: 24},
+            LeapSec{day: NaiveDate::from_ymd(2006,01,01) , tod: 0x000BE251097973C0, count: 23},
+            LeapSec{day: NaiveDate::from_ymd(1999,01,01) , tod: 0x000B1962F9305180, count: 22},
+            LeapSec{day: NaiveDate::from_ymd(1997,07,01) , tod: 0x000AEE3EFA402F40, count: 21},
+            LeapSec{day: NaiveDate::from_ymd(1996,01,01) , tod: 0x000AC34336FECD00, count: 20},
+            LeapSec{day: NaiveDate::from_ymd(1994,07,01) , tod: 0x000A981F380EAAC0, count: 19},
+            LeapSec{day: NaiveDate::from_ymd(1993,07,01) , tod: 0x000A7B70ABEB8880, count: 18},
+            LeapSec{day: NaiveDate::from_ymd(1992,07,01) , tod: 0x000A5EC21FC86640, count: 17},
+            LeapSec{day: NaiveDate::from_ymd(1991,01,01) , tod: 0x000A33C65C870400, count: 16},
+            LeapSec{day: NaiveDate::from_ymd(1990,01,01) , tod: 0x000A1717D063E1C0, count: 15},
+            LeapSec{day: NaiveDate::from_ymd(1988,01,01) , tod: 0x0009DDA69A557F80, count: 14},
+            LeapSec{day: NaiveDate::from_ymd(1985,07,01) , tod: 0x000995D40F517D40, count: 13},
+            LeapSec{day: NaiveDate::from_ymd(1983,07,01) , tod: 0x00095C62D9431B00, count: 12},
+            LeapSec{day: NaiveDate::from_ymd(1982,07,01) , tod: 0x00093FB44D1FF8C0, count: 11},
+            LeapSec{day: NaiveDate::from_ymd(1981,07,01) , tod: 0x00092305C0FCD680, count: 10},
+            LeapSec{day: NaiveDate::from_ymd(1980,01,01) , tod: 0x0008F809FDBB7440, count:  9},
+            LeapSec{day: NaiveDate::from_ymd(1979,01,01) , tod: 0x0008DB5B71985200, count:  8},
+            LeapSec{day: NaiveDate::from_ymd(1978,01,01) , tod: 0x0008BEACE5752FC0, count:  7},
+            LeapSec{day: NaiveDate::from_ymd(1977,01,01) , tod: 0x0008A1FE59520D80, count:  6},
+            LeapSec{day: NaiveDate::from_ymd(1976,01,01) , tod: 0x0008853BAF578B40, count:  5},
+            LeapSec{day: NaiveDate::from_ymd(1975,01,01) , tod: 0x0008688D23346900, count:  4},
+            LeapSec{day: NaiveDate::from_ymd(1974,01,01) , tod: 0x00084BDE971146C0, count:  3},
+            LeapSec{day: NaiveDate::from_ymd(1973,01,01) , tod: 0x00082F300AEE2480, count:  2},
+            LeapSec{day: NaiveDate::from_ymd(1972,07,01) , tod: 0x000820BA9811E240, count:  1},
+            LeapSec{day: NaiveDate::from_ymd(0000,01,01) , tod: 0x0000000000000000, count:  0},
         ])
     }
 
-    pub fn ls_search_day(&self, theday: NaiveDate) -> i32 {
-        match self.0.iter().find(|ref x| x.day >= theday) {
-            Some(ref x) => x.count,
-            None => self.0[self.0.len()-1].count,
-        }
+    pub fn ls_search_day(&self, todwork: &TodInfo) -> i64 {
+        let thedate = todwork.date.date();
+        match todwork.leap {
+            true => match self.0.iter().find( |ref x| x.day <= thedate ) {
+                Some(ref x) => x.count,
+                None => self.0[self.0.len()-1].count,
+            },
+            false => 0,
+        } 
     }
-
-    pub fn ls_search_tod(&self, thetod: u64) -> i32 {
-        println!("{:?}",thetod);
-        match self.0.iter().find(|ref x| x.tod >= thetod) {
-            Some(ref x) => x.count,
-            None => self.0[self.0.len()-1].count,
+    
+    pub fn ls_search_tod(&self, todwork: &TodInfo) -> i64 {
+        match todwork.leap {
+            true => match self.0.iter().find(|ref x| x.tod <= todwork.tod.0) {
+                Some(ref x) => x.count,
+                None => self.0[0].count,
+            },
+            false => 0,
         }
     }
 }
@@ -284,7 +296,9 @@ pub fn from_tod(a: String, todwork: &mut TodInfo) -> Vec<String> {
         },
         Some(x) => x,
     };
-    let zdate = match todbase.checked_add_signed(Duration::microseconds(todwork.tod.0 as i64)) {
+    todwork.lsec = todwork.lstab.ls_search_tod(todwork);
+    let x = todbase.checked_add_signed(Duration::microseconds(todwork.tod.0 as i64));
+    let zdate = match x {
         None => {
             result.push(format!("Can't handle this TOD value: {:?}",a));
             return result;
@@ -297,7 +311,7 @@ pub fn from_tod(a: String, todwork: &mut TodInfo) -> Vec<String> {
         match off.0 {
             None => {},
             Some(x) => {
-                todwork.date = zdate.checked_add_signed(Duration::seconds(x as i64))
+                todwork.date = zdate.checked_add_signed(Duration::seconds(x as i64 - todwork.lsec))
                     .expect("Couldn't convert date");
                 todwork.pmc = findpmc(&todwork);
                 result.push(todwork.text(off));
@@ -317,6 +331,7 @@ pub fn from_datetime(a: String, todwork: &mut TodInfo) -> Vec<String> {
         },
         Ok(x) => x,
     };
+    todwork.lsec = todwork.lstab.ls_search_day(todwork);
     let (zsec, zmic) = get_sec_mic(&todwork);
     todwork.pmc = findpmc(&todwork);
     
@@ -356,6 +371,7 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
         },
         Some(x) => x,
     };
+    todwork.lsec = todwork.lstab.ls_search_tod(todwork);
     let (zsec, zmic) = get_sec_mic(&todwork);
 
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
@@ -363,11 +379,8 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
         match off.0 {
             None => {},
             Some(x) => {
-                todwork.tod = Tod((zsec as i64 + x as i64) as u64 * 1_000_000 + zmic);
-                println!("{:?}",todwork.tod);
-                
-                let ls = todwork.lstab.ls_search_tod(todwork.tod.0);
-                result.push(format!("{} : {}",todwork.text(off),ls));
+                todwork.tod = Tod((zsec as i64 + x as i64 - todwork.lsec) as u64 * 1_000_000 + zmic);
+                result.push(todwork.text(off));
             },
         };
     };
