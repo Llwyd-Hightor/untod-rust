@@ -154,7 +154,7 @@ impl PerpMinuteClock {
     }
     pub fn new_from_hex(hex: &str) -> PerpMinuteClock {
         if AsciiExt::is_ascii_hexdigit(hex) {
-            let pval = u32::from_str_radix(hex,16);
+            let pval = u32::from_str_radix(&[hex,"0000000"].join("")[..8],16);
             match pval {
                 Ok(n) => PerpMinuteClock(Some(n)),
                 _ => PerpMinuteClock(None),
