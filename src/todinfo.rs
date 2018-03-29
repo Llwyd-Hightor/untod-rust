@@ -385,7 +385,7 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
         },
         Some(x) => x,
     };
-    todwork.lsec = todwork.lstab.ls_search_tod(todwork);
+    todwork.lsec = todwork.lstab.ls_search_day(todwork);
     let (zsec, zmic) = get_sec_mic(&todwork);
 
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
