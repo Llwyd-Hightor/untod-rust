@@ -325,8 +325,14 @@ pub fn from_datetime(a: String, todwork: &mut TodInfo) -> Vec<String> {
         match off.0 {
             None => {},
             Some(x) => {
-                todwork.tod = Tod((zsec as i64 + x as i64) as u64 * 1_000_000 + zmic);
-                result.push(todwork.text(off));
+                let x = zsec as i64 + x as i64 + todwork.lsec;
+                if x >= 0 {
+                    todwork.tod = Tod(x as u64 * 1_000_000 + zmic);
+                    result.push(todwork.text(off));
+                } else {
+                    result.push(format!("Date is out of range: {} {}",a,off));
+                    return result;
+                } ; 
             },
         };
     };
