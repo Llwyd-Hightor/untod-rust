@@ -31,7 +31,9 @@ pub struct TodInfo {
     pub loff:    Toffset,
     pub aoff:    Toffset,
     pub pad:     Padding,
-    pub leap:    bool,
+    pub cname:   String,
+    pub utc:     bool,
+    pub tai:     i64,
     pub lsec:    i64,
     pub lstab:   LeapSecTable,
 }
@@ -46,7 +48,9 @@ impl TodInfo {
             loff:    Toffset(Some(0)),
             aoff:    Toffset(None),
             pad:     Padding::None,
-            leap:    false,
+            cname:   "UTC".to_string(),
+            utc:     true,
+            tai:     0,
             lsec:    0,
             lstab:   LeapSecTable::new(),
         }
@@ -92,7 +96,16 @@ impl TodInfo {
             };
         };
 
-        todwork.leap = cmdl.is_present("leapsec");
+        if cmdl.is_present("etr") {
+            todwork.utc = false;
+            todwork.cname = "ETR".to_string();
+        }
+
+        if cmdl.is_present("tai") {
+            todwork.utc = false;
+            todwork.cname = "TAI".to_string();
+            todwork.tai = 10;
+        }
 
         if todwork.aoff == todwork.goff || todwork.aoff == todwork.loff {
             todwork.aoff = Toffset(None);
@@ -107,10 +120,10 @@ impl TodInfo {
         let odate = self.date.format("%F %H:%M:%S%.6f");
         let ojd = self.date.format("%Y.%j");
         let oday = self.date.format("%a");
-        if self.leap {
-            format!("{} : {} {} {} {} {} *{}",self.tod,odate,offset,ojd,oday,self.pmc,self.lsec)
+        if self.utc {
+            format!("{} : {} {}{} {} {} {} *{:+}",self.tod,odate,self.cname,offset,ojd,oday,self.pmc,self.lsec)
         } else {
-            format!("{} : {} {} {} {} {}",self.tod,odate,offset,ojd,oday,self.pmc)
+            format!("{} : {} {}{} {} {} {}",self.tod,odate,self.cname,offset,ojd,oday,self.pmc)
         }
     }
 }
@@ -124,7 +137,7 @@ impl fmt::Display for Toffset{
             Some(x) => {
                 let xmm = x / 60;
                 let xhh = xmm / 60;
-                write!(f,"UTC{:+03}:{:02}",xhh,xmm.abs()%60)
+                write!(f,"{:+03}:{:02}",xhh,xmm.abs()%60)
             }
         }
     }
@@ -141,7 +154,7 @@ impl PerpMinuteClock {
     }
     pub fn new_from_hex(hex: &str) -> PerpMinuteClock {
         if AsciiExt::is_ascii_hexdigit(hex) {
-            let pval = u32::from_str_radix(hex,16);
+            let pval = u32::from_str_radix(&[hex,"0000000"].join("")[..8],16);
             match pval {
                 Ok(n) => PerpMinuteClock(Some(n)),
                 _ => PerpMinuteClock(None),
@@ -206,7 +219,7 @@ impl LeapSecTable{
 
     pub fn ls_search_day(&self, todwork: &TodInfo) -> i64 {
         let thedate = todwork.date.date();
-        match todwork.leap {
+        match todwork.utc {
             true => match self.0.iter().find( |ref x| x.day <= thedate ) {
                 Some(ref x) => x.count,
                 None => self.0[self.0.len()-1].count,
@@ -216,7 +229,7 @@ impl LeapSecTable{
     }
     
     pub fn ls_search_tod(&self, todwork: &TodInfo) -> i64 {
-        match todwork.leap {
+        match todwork.utc {
             true => match self.0.iter().find(|ref x| x.tod <= todwork.tod.0) {
                 Some(ref x) => x.count,
                 None => self.0[0].count,
@@ -311,7 +324,8 @@ pub fn from_tod(a: String, todwork: &mut TodInfo) -> Vec<String> {
         match off.0 {
             None => {},
             Some(x) => {
-                todwork.date = zdate.checked_add_signed(Duration::seconds(x as i64 - todwork.lsec))
+                todwork.date = zdate
+                    .checked_add_signed(Duration::seconds(x as i64 - todwork.lsec - todwork.tai))
                     .expect("Couldn't convert date");
                 todwork.pmc = findpmc(&todwork);
                 result.push(todwork.text(off));
@@ -340,7 +354,7 @@ pub fn from_datetime(a: String, todwork: &mut TodInfo) -> Vec<String> {
         match off.0 {
             None => {},
             Some(x) => {
-                let x = zsec as i64 + x as i64 + todwork.lsec;
+                let x = zsec as i64 + x as i64 + todwork.lsec + todwork.tai;
                 if x >= 0 {
                     todwork.tod = Tod(x as u64 * 1_000_000 + zmic);
                     result.push(todwork.text(off));
@@ -371,7 +385,7 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
         },
         Some(x) => x,
     };
-    todwork.lsec = todwork.lstab.ls_search_tod(todwork);
+    todwork.lsec = todwork.lstab.ls_search_day(todwork);
     let (zsec, zmic) = get_sec_mic(&todwork);
 
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
@@ -379,7 +393,7 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo) -> Vec<String> {
         match off.0 {
             None => {},
             Some(x) => {
-                todwork.tod = Tod((zsec as i64 + x as i64 - todwork.lsec) as u64 * 1_000_000 + zmic);
+                todwork.tod = Tod((zsec as i64 + x as i64 - todwork.lsec - todwork.tai) as u64 * 1_000_000 + zmic);
                 result.push(todwork.text(off));
             },
         };
