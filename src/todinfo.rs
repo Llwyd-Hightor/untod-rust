@@ -78,7 +78,9 @@ impl TodInfo {
             todwork.pad = Padding::Right;
         }
         todwork.loff = match cmdl.value_of("zl",) {
-            None => Toffset(Some(Local::now().offset().fix().local_minus_utc() as i64,),),
+            None => Toffset(Some(i64::from(
+                Local::now().offset().fix().local_minus_utc(),
+            ),),),
             Some(soff,) => match soff.parse::<f32>() {
                 Ok(noff,) => Toffset(Some((60.0 * noff).round() as i64 * 60,),),
                 _ => {
@@ -155,7 +157,7 @@ impl fmt::Display for Toffset {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PerpMinuteClock(pub Option<u32,>,);
 impl PerpMinuteClock {
     pub fn new() -> PerpMinuteClock { PerpMinuteClock(None,) }
@@ -368,9 +370,9 @@ impl Tod {
 
     pub fn new_from_hex(hex: &str, pad: &Padding,) -> Option<Tod,> {
         if AsciiExt::is_ascii_hexdigit(hex,) {
-            let chex = match pad {
-                &Padding::Left => ["000000000000000", hex].join("",)[hex.len()..].to_string(),
-                &Padding::Right => [hex, "000000000000000"].join("",)[..16].to_string(),
+            let chex = match *pad {
+                Padding::Left => ["000000000000000", hex].join("",)[hex.len()..].to_string(),
+                Padding::Right => [hex, "000000000000000"].join("",)[..16].to_string(),
                 _ => if &hex.as_bytes()[..1] > b"b" {
                     ["000", hex, "000000000000"].join("",)[..16].to_string()
                 } else {
@@ -404,22 +406,22 @@ pub fn finddate(ds: String) -> ParseResult<NaiveDateTime,> {
             let padding = "1900.001@00:00:00.000000";
             let xlen = min(xlen, padding.len(),);
             let x = &padding[xlen..];
-            NaiveDateTime::parse_from_str(&(ds + &x), "%Y.%j@%H:%M:%S%.f",)
+            NaiveDateTime::parse_from_str(&(ds + x), "%Y.%j@%H:%M:%S%.f",)
         } else {
             let padding = "1900-01-01@00:00:00.000000";
             let xlen = min(xlen, padding.len(),);
             let x = &padding[xlen..];
-            NaiveDateTime::parse_from_str(&(ds + &x), "%F@%H:%M:%S%.f",)
+            NaiveDateTime::parse_from_str(&(ds + x), "%F@%H:%M:%S%.f",)
         }
     }
 }
 
 pub fn defaultdate() -> String { Utc::now().format("%F@%H:%M:%S%.6f",).to_string() }
 
-pub fn from_tod(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
-    let todbase = NaiveDate::from_ymd(1900, 01, 01,).and_hms(0, 0, 0,);
+pub fn from_tod(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
+    let todbase = NaiveDate::from_ymd(1900, 1, 1,).and_hms(0, 0, 0,);
     let mut result: Vec<String,> = Vec::new();
-    let xtod = Tod::new_from_hex(&a.clone(), &todwork.pad,);
+    let xtod = Tod::new_from_hex(&a.to_string(), &todwork.pad,);
     todwork.tod = match xtod {
         None => {
             result.push(format!("TOD value is invalid: {:?}", a),);
@@ -444,7 +446,7 @@ pub fn from_tod(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
                 todwork.date = zdate
                     .checked_add_signed(Duration::seconds(x - todwork.lsec - todwork.tai,),)
                     .expect("Couldn't convert date",);
-                todwork.pmc = findpmc(&todwork,);
+                todwork.pmc = findpmc(todwork,);
                 result.push(todwork.text(off,),);
             },
         };
@@ -452,9 +454,9 @@ pub fn from_tod(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
     result
 }
 
-pub fn from_datetime(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
+pub fn from_datetime(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
     let mut result: Vec<String,> = Vec::new();
-    let xdt = finddate(a.clone(),);
+    let xdt = finddate(a.to_string(),);
     todwork.date = match xdt {
         Err(_,) => {
             result.push(format!("Date {:?} is invalid", a),);
@@ -463,8 +465,8 @@ pub fn from_datetime(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
         Ok(x,) => x,
     };
     todwork.lsec = todwork.lstab.ls_search_day(todwork,);
-    let (zsec, zmic,) = get_sec_mic(&todwork,);
-    todwork.pmc = findpmc(&todwork,);
+    let (zsec, zmic,) = get_sec_mic(todwork,);
+    todwork.pmc = findpmc(todwork,);
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
     for off in olist {
         match off.0 {
@@ -484,10 +486,10 @@ pub fn from_datetime(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
     result
 }
 
-pub fn from_perpetual(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
-    let parsbase = NaiveDate::from_ymd(1966, 01, 03,).and_hms(0, 0, 0,);
+pub fn from_perpetual(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
+    let parsbase = NaiveDate::from_ymd(1966, 1, 3,).and_hms(0, 0, 0,);
     let mut result: Vec<String,> = Vec::new();
-    todwork.pmc = PerpMinuteClock::new_from_hex(&a,);
+    todwork.pmc = PerpMinuteClock::new_from_hex(a,);
     let pmc = match todwork.pmc.0 {
         None => {
             result.push(format!("Minute value is invalid: {:?}", a),);
@@ -495,7 +497,7 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
         },
         Some(x,) => x,
     };
-    todwork.date = match parsbase.checked_add_signed(Duration::minutes(pmc as i64,),) {
+    todwork.date = match parsbase.checked_add_signed(Duration::minutes(i64::from(pmc,),),) {
         None => {
             result.push(format!("Can't handle this pmc value: {:?}", a),);
             return result;
@@ -503,7 +505,7 @@ pub fn from_perpetual(a: String, todwork: &mut TodInfo,) -> Vec<String,> {
         Some(x,) => x,
     };
     todwork.lsec = todwork.lstab.ls_search_day(todwork,);
-    let (zsec, zmic,) = get_sec_mic(&todwork,);
+    let (zsec, zmic,) = get_sec_mic(todwork,);
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
     for off in olist {
         match off.0 {
@@ -534,10 +536,10 @@ pub fn args_or_clipboard(cmdl: &ArgMatches) -> Vec<String,> {
 }
 
 pub fn findpmc(todwork: &TodInfo) -> PerpMinuteClock {
-    let parsbase = NaiveDate::from_ymd(1966, 01, 03,).and_hms(0, 0, 0,);
+    let parsbase = NaiveDate::from_ymd(1966, 1, 3,).and_hms(0, 0, 0,);
     let pdiff = todwork.date.signed_duration_since(parsbase,);
     let pmin = pdiff.num_seconds() / 60;
-    if pmin >= 0 && pmin <= MAX as i64 {
+    if pmin >= 0 && pmin <= i64::from(MAX,) {
         PerpMinuteClock(Some(pmin as u32,),)
     } else {
         PerpMinuteClock(None,)
@@ -545,7 +547,7 @@ pub fn findpmc(todwork: &TodInfo) -> PerpMinuteClock {
 }
 
 pub fn get_sec_mic(todwork: &TodInfo) -> (u64, u64,) {
-    let todbase = NaiveDate::from_ymd(1900, 01, 01,).and_hms(0, 0, 0,);
+    let todbase = NaiveDate::from_ymd(1900, 1, 1,).and_hms(0, 0, 0,);
     let tdiff = todwork.date.signed_duration_since(todbase,);
     let zsec = tdiff.num_seconds();
     let zmic = (tdiff - Duration::seconds(zsec,))
