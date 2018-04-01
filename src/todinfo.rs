@@ -10,7 +10,6 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 
 use super::leapsectab::*;
 
-use std::ascii::AsciiExt;
 use std::cmp::min;
 use std::fmt;
 use std::u32::MAX;
@@ -167,7 +166,7 @@ impl PerpMinuteClock {
     pub fn new_from_int(tval: u32) -> PerpMinuteClock { PerpMinuteClock(Some(tval,),) }
 
     pub fn new_from_hex(hex: &str) -> PerpMinuteClock {
-        if AsciiExt::is_ascii_hexdigit(hex,) {
+        if hex.bytes().all(|b| b.is_ascii_hexdigit()) {
             let pval = u32::from_str_radix(&[hex, "0000000"].join("",)[..8], 16,);
             match pval {
                 Ok(n,) => PerpMinuteClock(Some(n,),),
@@ -194,7 +193,7 @@ impl Tod {
     pub fn new(tval: u64) -> Tod { Tod(tval,) }
 
     pub fn new_from_hex(hex: &str, pad: &Padding,) -> Option<Tod,> {
-        if AsciiExt::is_ascii_hexdigit(hex,) {
+        if hex.bytes().all(|b| b.is_ascii_hexdigit()) {
             let chex = match *pad {
                 Padding::Left => ["000000000000000", hex].join("",)[hex.len()..].to_string(),
                 Padding::Right => [hex, "000000000000000"].join("",)[..16].to_string(),
@@ -350,7 +349,7 @@ pub fn args_or_clipboard(cmdl: &ArgMatches) -> Vec<String,> {
     if cmdl.is_present("clipboard",) {
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         for item in ctx.get_contents().unwrap().split_whitespace() {
-            result.push(item.trim_matches(char::from(0,),).to_string(),);
+            result.push(item.to_string(),);
         }
     } else {
         for item in cmdl.values_of("values",).unwrap() {
