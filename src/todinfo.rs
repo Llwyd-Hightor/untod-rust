@@ -349,7 +349,7 @@ pub fn args_or_clipboard(cmdl: &ArgMatches) -> Vec<String,> {
     if cmdl.is_present("clipboard",) {
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         for item in ctx.get_contents().unwrap().split_whitespace() {
-            result.push(item.trim_matches(char::from(0,),).to_string(),);
+            result.push(item.to_string(),);
         }
     } else {
         for item in cmdl.values_of("values",).unwrap() {
