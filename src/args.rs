@@ -1,6 +1,7 @@
 extern crate clap;
 use self::clap::{App, Arg, ArgMatches};
 
+/// Define and extract the command line arguments
 pub fn utargs() -> ArgMatches<'static,> {
     App::new("untod",)
         .version(crate_version!(),)
