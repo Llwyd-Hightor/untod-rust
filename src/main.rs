@@ -11,6 +11,7 @@ fn main() {
             TodCalc::FromTod => from_tod(&a, &mut todwork,),
             TodCalc::FromDateTime => from_datetime(&a, &mut todwork,),
             TodCalc::FromPMC => from_perpetual(&a, &mut todwork,),
+            TodCalc::FromUnix => from_unix(&a, &mut todwork,),
         };
         for line in result {
             println!("{}", line);

@@ -24,6 +24,7 @@ pub enum TodCalc {
     FromTod,
     FromDateTime,
     FromPMC,
+    FromUnix,
 }
 
 /// Defines type of padding for input TOD Clock values
@@ -50,6 +51,7 @@ pub struct TodInfo {
     pub tod:     Tod,
     pub date:    NaiveDateTime,
     pub pmc:     PerpMinuteClock,
+    pub usc:     UnixSecondsClock,
     pub goff:    Toffset,
     pub loff:    Toffset,
     pub aoff:    Toffset,
@@ -69,6 +71,7 @@ impl TodInfo {
             tod:     Tod(0,),
             date:    Utc::now().naive_utc(),
             pmc:     PerpMinuteClock(None,),
+            usc:     UnixSecondsClock(None,),
             goff:    Toffset(Some(0,),),
             loff:    Toffset(Some(0,),),
             aoff:    Toffset(None,),
@@ -86,6 +89,9 @@ impl TodInfo {
         let mut todwork = TodInfo::new();
         if cmdl.is_present("reverse",) {
             todwork.runtype = TodCalc::FromDateTime;
+        }
+        if cmdl.is_present("unix",) {
+            todwork.runtype = TodCalc::FromUnix;
         }
         if cmdl.is_present("pmc",) {
             todwork.runtype = TodCalc::FromPMC;
@@ -150,8 +156,8 @@ impl TodInfo {
         let oday = self.date.format("%a",);
         if self.utc {
             format!(
-                "{} : {} {}{} {} {} {} *{:+}",
-                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.lsec
+                "{} : {} {}{} {} {} {} {} *{:+}",
+                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc, self.lsec
             )
         } else {
             format!(
@@ -210,6 +216,55 @@ impl PerpMinuteClock {
 }
 
 impl fmt::Display for PerpMinuteClock {
+    /// Displays as eight hex digits, without the *0x*
+    /// prefix, or as out-of-range
+    fn fmt(&self, f: &mut fmt::Formatter,) -> fmt::Result {
+        match self.0 {
+            Some(x,) => write!(f, "{:08x}", x),
+            None => write!(f, "--------"),
+        }
+    }
+}
+
+/// Unix Seconds Clock (*USC*) value
+///
+/// Optional, unsigned, number of seconds
+/// since 1970-01-01T00:00:00
+#[derive(Clone, Copy, Debug, Default)]
+pub struct UnixSecondsClock(pub Option<u64,>,);
+impl UnixSecondsClock {
+    /// Makes a zero PMC
+    pub fn new() -> UnixSecondsClock { UnixSecondsClock(None,) }
+
+    /// Makes a USC from an integer
+    pub fn new_from_int(tval: u64) -> UnixSecondsClock { 
+        if tval > u32::max_value().into() {
+            UnixSecondsClock(None,)
+            }
+        else {
+            UnixSecondsClock(Some(tval,),) 
+            }
+        }
+
+    /// Makes a USC from a hex string, zero-padded on the
+    /// right (default) or left
+    pub fn new_from_hex(hex: &str, pad: Padding) -> UnixSecondsClock {
+        if hex.bytes().all(|b| b.is_ascii_hexdigit(),) {
+            let uval = match pad {
+                Padding::Left => u64::from_str_radix(&["00000000", hex].join("",)[hex.len()..], 16,) ,
+                _             => u64::from_str_radix(&[hex, "0000000"].join("",)[..8], 16,) ,
+            } ;
+            match uval {
+                Ok(n,) => UnixSecondsClock(Some(n,),),
+                _ => UnixSecondsClock(None,),
+            }
+        } else {
+            UnixSecondsClock(None,)
+        }
+    }
+}
+
+impl fmt::Display for UnixSecondsClock {
     /// Displays as eight hex digits, without the *0x*
     /// prefix, or as out-of-range
     fn fmt(&self, f: &mut fmt::Formatter,) -> fmt::Result {
@@ -387,6 +442,42 @@ pub fn from_perpetual(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
         Some(x,) => x,
     };
     todwork.date = match parsbase.checked_add_signed(Duration::minutes(i64::from(pmc,),),) {
+        None => {
+            result.push(format!("Can't handle this pmc value: {:?}", a),);
+            return result;
+        },
+        Some(x,) => x,
+    };
+    todwork.lsec = todwork.lstab.ls_search_day(todwork,);
+    let (zsec, zmic,) = get_sec_mic(todwork,);
+    let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
+    for off in olist {
+        match off.0 {
+            None => {},
+            Some(x,) => {
+                todwork.tod =
+                    Tod((zsec as i64 + x - todwork.lsec - todwork.tai) as u64 * 1_000_000 + zmic,);
+                result.push(todwork.text(off,),);
+            },
+        };
+    }
+    result
+}
+
+/// Uses a Unix Seconds Clock value to calculate the
+/// others,  with up to three different time zone offsets
+pub fn from_unix(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
+    let unixbase = NaiveDate::from_ymd(1970, 1, 1,).and_hms(0, 0, 0,);
+    let mut result: Vec<String,> = Vec::new();
+    todwork.usc = UnixSecondsClock::new_from_hex(a, todwork.pad);
+    let pmc = match todwork.pmc.0 {
+        None => {
+            result.push(format!("Seconds value is invalid: {:?}", a),);
+            return result;
+        },
+        Some(x,) => x,
+    };
+    todwork.date = match unixbase.checked_add_signed(Duration::seconds(i64::from(pmc,),),) {
         None => {
             result.push(format!("Can't handle this pmc value: {:?}", a),);
             return result;

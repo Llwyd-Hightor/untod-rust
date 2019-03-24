@@ -46,7 +46,7 @@ pub fn utargs() -> ArgMatches<'static,> {
         .arg(
             Arg::with_name("pl",)
                 .display_order(4,)
-                .help("Pad Left: pad TOD with zeros on left",)
+                .help("Pad Left: pad TOD or Unix time with zeros on left",)
                 .long("lpad",)
                 .takes_value(false,),
         )
@@ -77,6 +77,15 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .value_name("offset",),
         )
         .arg(
+            Arg::with_name("reverse",)
+                .display_order(1,)
+                .conflicts_with("pmc",)
+                .help("Convert from Date/Time values",)
+                .long("date",)
+                .short("d",)
+                .takes_value(false,),
+        )
+        .arg(
             Arg::with_name("pmc",)
                 .display_order(1,)
                 .help("Convert from Perpetual Minute Clock (hex) values",)
@@ -85,12 +94,13 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .takes_value(false,),
         )
         .arg(
-            Arg::with_name("reverse",)
-                .display_order(1,)
+            Arg::with_name("unix",)
                 .conflicts_with("pmc",)
-                .help("Convert from Date/Time values",)
-                .long("date",)
-                .short("d",)
+                .conflicts_with("reverse",)
+                .display_order(1,)
+                .help("Convert from Unix Seconds Clock (hex) values",)
+                .short("u",)
+                .long("unix",)
                 .takes_value(false,),
         )
         .arg(
