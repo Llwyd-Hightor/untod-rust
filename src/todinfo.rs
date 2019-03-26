@@ -231,13 +231,13 @@ impl fmt::Display for PerpMinuteClock {
 /// Optional, unsigned, number of seconds
 /// since 1970-01-01T00:00:00
 #[derive(Clone, Copy, Debug, Default)]
-pub struct UnixSecondsClock(pub Option<u64,>,);
+pub struct UnixSecondsClock(pub Option<u32,>,);
 impl UnixSecondsClock {
     /// Makes a zero PMC
     pub fn new() -> UnixSecondsClock { UnixSecondsClock(None,) }
 
     /// Makes a USC from an integer
-    pub fn new_from_int(tval: u64) -> UnixSecondsClock { 
+    pub fn new_from_int(tval: u32) -> UnixSecondsClock { 
         if tval > u32::max_value().into() {
             UnixSecondsClock(None,)
             }
@@ -251,8 +251,8 @@ impl UnixSecondsClock {
     pub fn new_from_hex(hex: &str, pad: Padding) -> UnixSecondsClock {
         if hex.bytes().all(|b| b.is_ascii_hexdigit(),) {
             let uval = match pad {
-                Padding::Left => u64::from_str_radix(&["00000000", hex].join("",)[hex.len()..], 16,) ,
-                _             => u64::from_str_radix(&[hex, "0000000"].join("",)[..8], 16,) ,
+                Padding::Left => u32::from_str_radix(&["00000000", hex].join("",)[hex.len()..], 16,) ,
+                _             => u32::from_str_radix(&[hex, "0000000"].join("",)[..8], 16,) ,
             } ;
             match uval {
                 Ok(n,) => UnixSecondsClock(Some(n,),),
@@ -470,14 +470,14 @@ pub fn from_unix(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
     let unixbase = NaiveDate::from_ymd(1970, 1, 1,).and_hms(0, 0, 0,);
     let mut result: Vec<String,> = Vec::new();
     todwork.usc = UnixSecondsClock::new_from_hex(a, todwork.pad);
-    let pmc = match todwork.pmc.0 {
+    let tusc = match todwork.usc.0 {
         None => {
             result.push(format!("Seconds value is invalid: {:?}", a),);
             return result;
         },
         Some(x,) => x,
     };
-    todwork.date = match unixbase.checked_add_signed(Duration::seconds(i64::from(pmc,),),) {
+    todwork.date = match unixbase.checked_add_signed(Duration::seconds(i64::from(tusc,),),) {
         None => {
             result.push(format!("Can't handle this pmc value: {:?}", a),);
             return result;
