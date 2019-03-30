@@ -3,6 +3,8 @@ use self::chrono::NaiveDate;
 
 use super::todinfo::*;
 
+/// A table structure for finding leap seconds from a date
+/// or TOD clock
 #[derive(Clone, Debug)]
 pub struct LeapSec {
     day:   NaiveDate,
@@ -10,6 +12,10 @@ pub struct LeapSec {
     count: i64,
 }
 
+/// The Leap Second table
+///
+/// The table must be kept in descending order of effective
+/// Date and TOD
 #[derive(Debug, Default)]
 pub struct LeapSecTable(Vec<LeapSec,>,);
 impl LeapSecTable {
@@ -158,6 +164,7 @@ impl LeapSecTable {
         ],)
     }
 
+    /// Search for leap-seconds based on the TodInfo date
     pub fn ls_search_day(&self, todwork: &TodInfo,) -> i64 {
         let thedate = todwork.date.date();
         if todwork.utc {
@@ -170,6 +177,8 @@ impl LeapSecTable {
         }
     }
 
+    /// Search for leap-seconds based on the TodInfo TOD
+    /// value
     pub fn ls_search_tod(&self, todwork: &TodInfo,) -> i64 {
         if todwork.utc {
             match self.0.iter().find(|x| x.tod <= todwork.tod.0,) {

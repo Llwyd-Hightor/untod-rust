@@ -1,6 +1,7 @@
 extern crate clap;
 use self::clap::{App, Arg, ArgMatches};
 
+/// Define and extract the command line arguments
 pub fn utargs() -> ArgMatches<'static,> {
     App::new("untod",)
         .version(crate_version!(),)
@@ -43,6 +44,13 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .takes_value(false,),
         )
         .arg(
+            Arg::with_name("headers",)
+                .display_order(2,)
+                .help("Display column headers",)
+                .long("headers",)
+                .takes_value(false,),
+        )
+        .arg(
             Arg::with_name("pl",)
                 .display_order(4,)
                 .help("Pad Left: pad TOD with zeros on left",)
@@ -76,6 +84,15 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .value_name("offset",),
         )
         .arg(
+            Arg::with_name("reverse",)
+                .display_order(1,)
+                .conflicts_with("pmc",)
+                .help("Convert from Date/Time values",)
+                .long("date",)
+                .short("d",)
+                .takes_value(false,),
+        )
+        .arg(
             Arg::with_name("pmc",)
                 .display_order(1,)
                 .help("Convert from Perpetual Minute Clock (hex) values",)
@@ -84,12 +101,13 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .takes_value(false,),
         )
         .arg(
-            Arg::with_name("reverse",)
-                .display_order(1,)
+            Arg::with_name("unix",)
                 .conflicts_with("pmc",)
-                .help("Convert from Date/Time values",)
-                .long("date",)
-                .short("d",)
+                .conflicts_with("reverse",)
+                .display_order(1,)
+                .help("Convert from Unix Seconds Clock values",)
+                .short("u",)
+                .long("unix",)
                 .takes_value(false,),
         )
         .arg(
