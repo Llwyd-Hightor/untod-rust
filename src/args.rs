@@ -44,6 +44,13 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .takes_value(false,),
         )
         .arg(
+            Arg::with_name("headers",)
+                .display_order(2,)
+                .help("Display column headers",)
+                .long("headers",)
+                .takes_value(false,),
+        )
+        .arg(
             Arg::with_name("pl",)
                 .display_order(4,)
                 .help("Pad Left: pad TOD with zeros on left",)

@@ -13,6 +13,10 @@ fn main() {
             TodCalc::FromPMC => from_perpetual(&a, &mut todwork,),
             TodCalc::FromUnix => from_unix(&a, &mut todwork,),
         };
+        if cmdl.is_present("headers",) {
+            println!("Ext       TOD              Date          Time        Zone     Julian   D    Perp        Unix      Leap");
+            println!("--- ----------------- : ---------- --------------- --------- -------- --- -------- -------------- ----");
+        }
         for line in result {
             println!("{}", line);
         }
