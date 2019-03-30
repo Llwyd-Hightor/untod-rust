@@ -46,7 +46,7 @@ pub fn utargs() -> ArgMatches<'static,> {
         .arg(
             Arg::with_name("pl",)
                 .display_order(4,)
-                .help("Pad Left: pad TOD or Unix time with zeros on left",)
+                .help("Pad Left: pad TOD with zeros on left",)
                 .long("lpad",)
                 .takes_value(false,),
         )
@@ -98,7 +98,7 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .conflicts_with("pmc",)
                 .conflicts_with("reverse",)
                 .display_order(1,)
-                .help("Convert from Unix Seconds Clock (hex) values",)
+                .help("Convert from Unix Seconds Clock values",)
                 .short("u",)
                 .long("unix",)
                 .takes_value(false,),

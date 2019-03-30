@@ -10,6 +10,7 @@ use self::clipboard::{ClipboardContext, ClipboardProvider};
 use super::leapsectab::*;
 
 use std::cmp::min;
+use std::num::ParseIntError;
 use std::fmt;
 use std::u32::MAX;
 
@@ -231,46 +232,32 @@ impl fmt::Display for PerpMinuteClock {
 /// Optional, unsigned, number of seconds
 /// since 1970-01-01T00:00:00
 #[derive(Clone, Copy, Debug, Default)]
-pub struct UnixSecondsClock(pub Option<u32,>,);
+pub struct UnixSecondsClock(pub Option<i64,>,);
 impl UnixSecondsClock {
     /// Makes a zero USC
     pub fn new() -> UnixSecondsClock { UnixSecondsClock(None,) }
 
     /// Makes a USC from an integer
-    pub fn new_from_int(tval: u32) -> UnixSecondsClock { 
-        if tval > u32::max_value().into() {
-            UnixSecondsClock(None,)
-            }
-        else {
-            UnixSecondsClock(Some(tval,),) 
-            }
+    pub fn new_from_int(tval: i64) -> UnixSecondsClock { 
+        UnixSecondsClock(Some(tval,),) 
         }
 
-    /// Makes a USC from a hex string, zero-padded on the
-    /// right (default) or left
-    pub fn new_from_hex(hex: &str, pad: Padding) -> UnixSecondsClock {
-        if hex.bytes().all(|b| b.is_ascii_hexdigit(),) {
-            let uval = match pad {
-                Padding::Left => u32::from_str_radix(&["00000000", hex].join("",)[hex.len()..], 16,) ,
-                _             => u32::from_str_radix(&[hex, "0000000"].join("",)[..8], 16,) ,
-            } ;
-            match uval {
-                Ok(n,) => UnixSecondsClock(Some(n,),),
-                _ => UnixSecondsClock(None,),
+    /// Makes a USC from a decimal string
+    pub fn new_from_decimal(dec: &str) -> UnixSecondsClock {
+        let uval: Result<i64, ParseIntError> = dec.parse();  
+        match uval {                
+            Ok(n,) => UnixSecondsClock(Some(n,),),
+            _ => UnixSecondsClock(None,),
             }
-        } else {
-            UnixSecondsClock(None,)
         }
-    }
 }
 
 impl fmt::Display for UnixSecondsClock {
-    /// Displays as eight hex digits, without the *0x*
-    /// prefix, or as out-of-range
+    /// Displays as decimal digits
     fn fmt(&self, f: &mut fmt::Formatter,) -> fmt::Result {
         match self.0 {
-            Some(x,) => write!(f, "{:08x}", x),
-            None => write!(f, "--------"),
+            Some(x,) => write!(f, "{:14}", x),
+            None => write!(f, "--"),
         }
     }
 }
@@ -472,7 +459,7 @@ pub fn from_perpetual(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
 pub fn from_unix(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
     let unixbase = NaiveDate::from_ymd(1970, 1, 1,).and_hms(0, 0, 0,);
     let mut result: Vec<String,> = Vec::new();
-    todwork.usc = UnixSecondsClock::new_from_hex(a, todwork.pad);
+    todwork.usc = UnixSecondsClock::new_from_decimal(a);
     let tusc = match todwork.usc.0 {
         None => {
             result.push(format!("Seconds value is invalid: {:?}", a),);
@@ -538,11 +525,7 @@ pub fn findpmc(todwork: &TodInfo) -> PerpMinuteClock {
 pub fn findusc(todwork: &TodInfo) -> UnixSecondsClock {
     let unixbase = NaiveDate::from_ymd(1970, 1, 1,).and_hms(0, 0, 0,);
     let usec = todwork.date.signed_duration_since(unixbase,).num_seconds();
-    if usec >= 0 && usec <= u32::max_value() as i64 {
-        UnixSecondsClock(Some(usec as u32,),)
-    } else {
-        UnixSecondsClock(None,)
-    }
+    UnixSecondsClock(Some(usec,),)
 }
 
 /// Converts date and time into seconds and microseconds of
