@@ -161,8 +161,8 @@ impl TodInfo {
             )
         } else {
             format!(
-                "{} : {} {}{} {} {} {}",
-                self.tod, odate, self.cname, offset, ojd, oday, self.pmc
+                "{} : {} {}{} {} {} {} {}",
+                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc
             )
         }
     }
@@ -233,7 +233,7 @@ impl fmt::Display for PerpMinuteClock {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct UnixSecondsClock(pub Option<u32,>,);
 impl UnixSecondsClock {
-    /// Makes a zero PMC
+    /// Makes a zero USC
     pub fn new() -> UnixSecondsClock { UnixSecondsClock(None,) }
 
     /// Makes a USC from an integer
@@ -387,6 +387,7 @@ pub fn from_tod(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
                     .checked_add_signed(Duration::seconds(x - todwork.lsec - todwork.tai,),)
                     .expect("Couldn't convert date",);
                 todwork.pmc = findpmc(todwork,);
+                todwork.usc = findusc(todwork,);
                 result.push(todwork.text(off,),);
             },
         };
@@ -409,6 +410,7 @@ pub fn from_datetime(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
     todwork.lsec = todwork.lstab.ls_search_day(todwork,);
     let (zsec, zmic,) = get_sec_mic(todwork,);
     todwork.pmc = findpmc(todwork,);
+    todwork.usc = findusc(todwork,);
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
     for off in olist {
         match off.0 {
@@ -448,6 +450,7 @@ pub fn from_perpetual(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
         },
         Some(x,) => x,
     };
+    todwork.usc = findusc(todwork,);
     todwork.lsec = todwork.lstab.ls_search_day(todwork,);
     let (zsec, zmic,) = get_sec_mic(todwork,);
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
@@ -527,6 +530,18 @@ pub fn findpmc(todwork: &TodInfo) -> PerpMinuteClock {
         PerpMinuteClock(Some(pmin as u32,),)
     } else {
         PerpMinuteClock(None,)
+    }
+}
+
+/// Calculates a Unix Seconds Clock from a date and
+/// time, or *None* if out-of-range
+pub fn findusc(todwork: &TodInfo) -> UnixSecondsClock {
+    let unixbase = NaiveDate::from_ymd(1970, 1, 1,).and_hms(0, 0, 0,);
+    let usec = todwork.date.signed_duration_since(unixbase,).num_seconds();
+    if usec >= 0 && usec <= u32::max_value() as i64 {
+        UnixSecondsClock(Some(usec as u32,),)
+    } else {
+        UnixSecondsClock(None,)
     }
 }
 
