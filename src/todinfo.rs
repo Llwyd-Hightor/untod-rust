@@ -13,6 +13,8 @@ use std::cmp::min;
 use std::num::ParseIntError;
 use std::fmt;
 use std::u32::MAX;
+use std::fs::File;
+use std::io::{self, Read};
 
 /// Defines calculation type (input value interpretation):
 /// *    FromTod: Inputs are (hex) TOD Clock values
@@ -44,6 +46,13 @@ pub enum Padding {
     None,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum Source {
+    Clip,
+    File,
+    None,
+}
+
 /// Work area for assembling the calculation
 
 #[derive(Debug)]
@@ -57,6 +66,7 @@ pub struct TodInfo {
     pub loff:    Toffset,
     pub aoff:    Toffset,
     pub pad:     Padding,
+    pub src:     Source,
     pub cname:   String,
     pub utc:     bool,
     pub tai:     i64,
@@ -77,6 +87,7 @@ impl TodInfo {
             loff:    Toffset(Some(0,),),
             aoff:    Toffset(None,),
             pad:     Padding::None,
+            src:     Source::None,
             cname:   "UTC".to_string(),
             utc:     true,
             tai:     0,
@@ -96,6 +107,12 @@ impl TodInfo {
         }
         if cmdl.is_present("pmc",) {
             todwork.runtype = TodCalc::FromPMC;
+        }
+        if cmdl.is_present("clipboard",) {
+            todwork.src = Source::Clip ;
+        }
+        if cmdl.is_present("infile",) {
+            todwork.src = Source::File ;
         }
         if cmdl.is_present("pl",) {
             todwork.pad = Padding::Left;
@@ -139,7 +156,7 @@ impl TodInfo {
         if cmdl.is_present("tai",) {
             todwork.utc = false;
             todwork.cname = "TAI".to_string();
-            todwork.tai = 10;
+            todwork.tai = -10;
         }
         if todwork.aoff == todwork.goff || todwork.aoff == todwork.loff {
             todwork.aoff = Toffset(None,);
@@ -238,14 +255,14 @@ impl UnixSecondsClock {
     pub fn new() -> UnixSecondsClock { UnixSecondsClock(None,) }
 
     /// Makes a USC from an integer
-    pub fn new_from_int(tval: i64) -> UnixSecondsClock { 
-        UnixSecondsClock(Some(tval,),) 
+    pub fn new_from_int(tval: i64) -> UnixSecondsClock {
+        UnixSecondsClock(Some(tval,),)
         }
 
     /// Makes a USC from a decimal string
     pub fn new_from_decimal(dec: &str) -> UnixSecondsClock {
-        let uval: Result<i64, ParseIntError> = dec.parse();  
-        match uval {                
+        let uval: Result<i64, ParseIntError> = dec.parse();
+        match uval {
             Ok(n,) => UnixSecondsClock(Some(n,),),
             _ => UnixSecondsClock(None,),
             }
@@ -492,20 +509,39 @@ pub fn from_unix(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
 
 /// Builds a list of values for conversion either from the
 /// command line  or optionally from the clipboard
-pub fn args_or_clipboard(cmdl: &ArgMatches) -> Vec<String,> {
+pub fn args_or_elsewhere(cmdl: &ArgMatches) -> Vec<String,> {
     let mut result: Vec<String,> = Vec::new();
     if cmdl.is_present("clipboard",) {
         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
         for item in ctx.get_contents().unwrap().split_whitespace() {
             result.push(item.to_string(),);
         }
-    } else {
-        for item in cmdl.values_of("values",).unwrap() {
+        return result
+    }
+
+    if cmdl.is_present("infile",) {
+        let filename = match cmdl.value_of("infile",) {
+            Some(fname,) => fname,
+            None => "-",
+            };
+        let mut rdr: Box<io::Read> = if filename == "-" {
+            Box::new(io::stdin())
+            } else {
+            Box::new(File::open(filename).unwrap())
+            };
+        let mut buffer = String::new();
+        rdr.read_to_string(&mut buffer).unwrap();
+        for item in buffer.split_whitespace() {
             result.push(item.to_string(),);
+            }
+        return result;
+    }
+
+    for item in cmdl.values_of("values",).unwrap() {
+        result.push(item.to_string(),);
         }
-    };
-    result
-}
+    return result;
+    }
 
 /// Calculates a Perpetual Minute Clock from a date and
 /// time, or *None* if out-of-range
