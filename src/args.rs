@@ -40,8 +40,17 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .help("Get values for conversion from clipboard (default is from command line)",)
                 .short("c",)
                 .long("clipboard",)
-                .conflicts_with("values",)
+                .conflicts_with_all(&["values","infile"])
                 .takes_value(false,),
+        )
+        .arg(
+            Arg::with_name("infile",)
+                .display_order(2,)
+                .help("Get values for conversion from a file (default is from command line)",)
+                .short("i",)
+                .long("input",)
+                .allow_hyphen_values(true)
+                .value_name("FILE",),
         )
         .arg(
             Arg::with_name("headers",)
@@ -71,8 +80,7 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .long("lzone",)
                 .short("l",)
                 .env("UNTOD_LZONE",)
-                .takes_value(true,)
-                .value_name("offset",),
+                .value_name("OFFSET",),
         )
         .arg(
             Arg::with_name("za",)
@@ -80,8 +88,7 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .long("azone",)
                 .short("a",)
                 .env("UNTOD_AZONE",)
-                .takes_value(true,)
-                .value_name("offset",),
+                .value_name("OFFSET",),
         )
         .arg(
             Arg::with_name("reverse",)
@@ -113,8 +120,8 @@ pub fn utargs() -> ArgMatches<'static,> {
         .arg(
             Arg::with_name("values",)
                 .help("Values for conversion",)
-                .takes_value(true,)
-                .required_unless("clipboard",)
+                .value_name("VALUE",)
+                .required_unless_one(&["clipboard", "infile"])
                 .default_value_if("reverse", None, "NOW",)
                 .multiple(true,),
         )
