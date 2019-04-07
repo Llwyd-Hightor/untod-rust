@@ -5,7 +5,7 @@ use untod::todinfo::*;
 fn main() {
     let cmdl = utargs();
     let mut todwork = TodInfo::new_from_args(&cmdl,);
-    let vlist = args_or_clipboard(&cmdl,);
+    let vlist = args_or_elsewhere(&cmdl,);
     for a in vlist {
         let result: Vec<String,> = match todwork.runtype {
             TodCalc::FromTod => from_tod(&a, &mut todwork,),
