@@ -156,7 +156,7 @@ impl TodInfo {
         if cmdl.is_present("tai",) {
             todwork.utc = false;
             todwork.cname = "TAI".to_string();
-            todwork.tai = 10;
+            todwork.tai = -10;
         }
         if todwork.aoff == todwork.goff || todwork.aoff == todwork.loff {
             todwork.aoff = Toffset(None,);
