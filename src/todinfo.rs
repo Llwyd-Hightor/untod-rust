@@ -299,7 +299,7 @@ impl Tod {
             let chex = match *pad {
                 Padding::Left => ["000000000000000", hex].join("",)[hex.len()..].to_string(),
                 Padding::Right => [hex, "000000000000000"].join("",)[..16].to_string(),
-                _ => if &hex.as_bytes()[..1] > b"b" {
+                _ => if &hex.to_uppercase().as_bytes()[..1] > b"B" {
                     ["000", hex, "000000000000"].join("",)[..16].to_string()
                 } else {
                     ["00", hex, "0000000000000"].join("",)[..16].to_string()
