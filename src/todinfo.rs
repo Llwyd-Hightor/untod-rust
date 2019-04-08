@@ -491,6 +491,7 @@ pub fn from_unix(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
         },
         Some(x,) => x,
     };
+    todwork.pmc = findpmc(todwork,);
     todwork.lsec = todwork.lstab.ls_search_day(todwork,);
     let (zsec, zmic,) = get_sec_mic(todwork,);
     let olist = vec![todwork.goff, todwork.loff, todwork.aoff];
