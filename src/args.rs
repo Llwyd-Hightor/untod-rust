@@ -37,7 +37,7 @@ pub fn utargs() -> ArgMatches<'static,> {
         .arg(
             Arg::with_name("clipboard",)
                 .display_order(2,)
-                .help("Get values for conversion from clipboard (default is from command line)",)
+                .help("Get values for conversion from clipboard",)
                 .short("c",)
                 .long("clipboard",)
                 .conflicts_with_all(&["values","infile"])
@@ -46,7 +46,7 @@ pub fn utargs() -> ArgMatches<'static,> {
         .arg(
             Arg::with_name("infile",)
                 .display_order(2,)
-                .help("Get values for conversion from a file (default is from command line)",)
+                .help("Get values for conversion from a file ( - for STDIN )",)
                 .short("i",)
                 .long("input",)
                 .allow_hyphen_values(true)
@@ -119,7 +119,7 @@ pub fn utargs() -> ArgMatches<'static,> {
         )
         .arg(
             Arg::with_name("values",)
-                .help("Values for conversion",)
+                .help("Values for conversion (if not from --input or --clipboard)",)
                 .value_name("VALUE",)
                 .required_unless_one(&["clipboard", "infile"])
                 .default_value_if("reverse", None, "NOW",)
