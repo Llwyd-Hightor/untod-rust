@@ -149,9 +149,9 @@ impl TodInfo {
                 todwork.goff = Toffset(None,);
             };
         };
-        if cmdl.is_present("etr",) {
+        if cmdl.is_present("lor",) {
             todwork.utc = false;
-            todwork.cname = "ETR".to_string();
+            todwork.cname = "LOR".to_string();
         }
         if cmdl.is_present("tai",) {
             todwork.utc = false;

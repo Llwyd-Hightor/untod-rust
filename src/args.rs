@@ -6,15 +6,15 @@ pub fn utargs() -> ArgMatches<'static,> {
     App::new("untod",)
         .version(crate_version!(),)
         .author("Brent Longborough",)
-        .about("Converts among Date/Time, TOD, and PARS Perpetual Minute Clock for UTC, TAI or ETR",)
+        .about("Converts among Date/Time, TOD, and PARS Perpetual Minute Clock for UTC, TAI or LORAN/IBM",)
         .before_help("untod: the Swiss Army Chainsaw for the TOD, and other, clocks",)
         .after_help("Default conversion is from hex TOD to UTC with leap-seconds",)
         .arg(
-            Arg::with_name("etr",)
+            Arg::with_name("lor",)
                 .display_order(3,)
-                .help("Ignore leap-seconds -- ETR (IBM/LORAN)",)
-                .long("etr",)
-                .short("e",)
+                .help("Ignore leap-seconds -- LORAN/IBM",)
+                .long("loran",)
+                .short("l",)
                 .takes_value(false,)
                 .conflicts_with("tai",),
         )
@@ -78,7 +78,6 @@ pub fn utargs() -> ArgMatches<'static,> {
             Arg::with_name("zl",)
                 .help("Local timezone: override local time offset ([-+]n.n)",)
                 .long("lzone",)
-                .short("l",)
                 .env("UNTOD_LZONE",)
                 .value_name("OFFSET",),
         )
@@ -86,7 +85,6 @@ pub fn utargs() -> ArgMatches<'static,> {
             Arg::with_name("za",)
                 .help("Alternate timezone: specify additional timezone offset ([-+]n.n)",)
                 .long("azone",)
-                .short("a",)
                 .env("UNTOD_AZONE",)
                 .value_name("OFFSET",),
         )
