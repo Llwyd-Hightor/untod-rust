@@ -6,6 +6,10 @@ fn main() {
     let cmdl = utargs();
     let mut todwork = TodInfo::new_from_args(&cmdl,);
     let vlist = args_or_elsewhere(&cmdl,);
+    if cmdl.is_present("headers",) {
+        println!("Ext       TOD              Date          Time        Zone     Julian   D    Perp        Unix      Leap");
+        println!("--- ----------------- : ---------- --------------- --------- -------- --- -------- -------------- ----");
+    }
     for a in vlist {
         let result: Vec<String,> = match todwork.runtype {
             TodCalc::FromTod => from_tod(&a, &mut todwork,),
@@ -13,10 +17,6 @@ fn main() {
             TodCalc::FromPMC => from_perpetual(&a, &mut todwork,),
             TodCalc::FromUnix => from_unix(&a, &mut todwork,),
         };
-        if cmdl.is_present("headers",) {
-            println!("Ext       TOD              Date          Time        Zone     Julian   D    Perp        Unix      Leap");
-            println!("--- ----------------- : ---------- --------------- --------- -------- --- -------- -------------- ----");
-        }
         for line in result {
             println!("{}", line);
         }
