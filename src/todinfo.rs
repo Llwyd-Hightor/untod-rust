@@ -525,7 +525,7 @@ pub fn args_or_elsewhere(cmdl: &ArgMatches) -> Vec<String,> {
             Some(fname,) => fname,
             None => "-",
             };
-        let mut rdr: Box<io::Read> = if filename == "-" {
+        let mut rdr: Box<dyn io::Read> = if filename == "-" {
             Box::new(io::stdin())
             } else {
             Box::new(File::open(filename).unwrap())
