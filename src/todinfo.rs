@@ -68,6 +68,7 @@ pub struct TodInfo {
     pub pad:     Padding,
     pub src:     Source,
     pub cname:   String,
+    pub csv:     bool,
     pub utc:     bool,
     pub tai:     i64,
     pub lsec:    i64,
@@ -89,6 +90,7 @@ impl TodInfo {
             pad:     Padding::None,
             src:     Source::None,
             cname:   "UTC".to_string(),
+            csv:     false,
             utc:     true,
             tai:     0,
             lsec:    0,
@@ -164,24 +166,44 @@ impl TodInfo {
         if todwork.loff == todwork.goff {
             todwork.loff = Toffset(None,);
         }
+        todwork.csv = cmdl.is_present("csv",) ;
         todwork
     }
 
-    /// Formats the work atra values as a line of text
+    /// Formats the work area values as a line of text
     pub fn text(&self, offset: Toffset,) -> String {
-        let odate = self.date.format("%F %H:%M:%S%.6f",);
         let ojd = self.date.format("%Y.%j",);
         let oday = self.date.format("%a",);
-        if self.utc {
-            format!(
-                "{} : {} {}{} {} {} {} {} *{:+}",
-                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc, self.lsec
-            )
+        if self.csv {
+            let odate = self.date.format("%F,%H:%M:%S%.6f",);
+            if self.utc {
+                format!("{},{},{}{},{},{},{},{:0},*{:+}",
+                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc_csv(), 
+                self.lsec 
+                )
+            } else {
+                format!("{},{},{}{},{},{},{},{:0},NA",
+                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc_csv()
+                )
+            }    
         } else {
-            format!(
-                "{} : {} {}{} {} {} {} {}",
+            let odate = self.date.format("%F %H:%M:%S%.6f",);
+            if self.utc {
+                format!("{} : {} {}{} {} {} {} {} *{:+}",
+                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc, self.lsec
+                )
+            } else {
+                format!("{} : {} {}{} {} {} {} {}",
                 self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc
-            )
+                )
+            }    
+        }
+    }
+    
+    pub fn usc_csv(&self) -> String {
+        match self.usc.0 {
+            Some(x,) => format!("{}", x),
+            None     => "--".to_string(),
         }
     }
 }
