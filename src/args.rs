@@ -60,6 +60,13 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .takes_value(false,),
         )
         .arg(
+            Arg::with_name("csv",)
+                .display_order(2,)
+                .help("Output in CSV format",)
+                .long("csv",)
+                .takes_value(false,),
+        )
+        .arg(
             Arg::with_name("pl",)
                 .display_order(4,)
                 .help("Pad Left: pad TOD with zeros on left",)

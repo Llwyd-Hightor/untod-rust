@@ -7,8 +7,12 @@ fn main() {
     let mut todwork = TodInfo::new_from_args(&cmdl,);
     let vlist = args_or_elsewhere(&cmdl,);
     if cmdl.is_present("headers",) {
-        println!("Ext       TOD              Date          Time        Zone     Julian   D    Perp        Unix      Leap");
-        println!("--- ----------------- : ---------- --------------- --------- -------- --- -------- -------------- ----");
+        if cmdl.is_present("csv",) {
+            println!("ExtTOD,Date,Time,Zone,Julian,D,Perp,Unix,Leap");
+        } else {
+            println!("Ext       TOD              Date          Time        Zone     Julian   D    Perp        Unix      Leap");
+            println!("--- ----------------- : ---------- --------------- --------- -------- --- -------- -------------- ----");
+        }
     }
     for a in vlist {
         let result: Vec<String,> = match todwork.runtype {
