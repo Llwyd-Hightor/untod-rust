@@ -74,6 +74,7 @@ pub struct TodInfo {
     pub tai:     i64,
     pub lsec:    i64,
     pub lstab:   LeapSecTable,
+    pub annot:   String,
 }
 
 impl TodInfo {
@@ -96,6 +97,7 @@ impl TodInfo {
             tai:     0,
             lsec:    0,
             lstab:   LeapSecTable::new(),
+            annot:   " ".to_string(),
         }
     }
 
@@ -113,6 +115,15 @@ impl TodInfo {
         }
         if cmdl.is_present("pmc",) {
             todwork.runtype = TodCalc::FromPMC;
+        }
+        if cmdl.is_present("annot") {
+            todwork.annot = match todwork.runtype {
+                TodCalc::FromTod      => "<== TOD Clock".to_string(),
+                TodCalc::FromDateTime => "<== Date/Time".to_string(),
+                TodCalc::FromUnix     => "<== Unix seconds".to_string(),
+                TodCalc::FromCsec     => "<== 20th Century seconds".to_string(),
+                TodCalc::FromPMC      => "<== Perpetual Minute Clock".to_string(),
+            }
         }
         if cmdl.is_present("clipboard",) {
             todwork.src = Source::Clip ;
@@ -193,12 +204,14 @@ impl TodInfo {
         } else {
             let odate = self.date.format("%F %H:%M:%S%.6f",);
             if self.utc {
-                format!("{} : {} {}{} {} {} {} {} *{:+}",
-                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc, self.lsec
+                format!("{} : {} {}{} {} {} {} {} *{:+} {}",
+                self.tod, odate, self.cname, offset, ojd, oday, 
+                self.pmc, self.usc, self.lsec, self.annot
                 )
             } else {
-                format!("{} : {} {}{} {} {} {} {}",
-                self.tod, odate, self.cname, offset, ojd, oday, self.pmc, self.usc
+                format!("{} : {} {}{} {} {} {} {}      {}",
+                self.tod, odate, self.cname, offset, ojd, oday, 
+                self.pmc, self.usc, self.annot
                 )
             }    
         }

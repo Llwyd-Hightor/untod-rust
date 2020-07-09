@@ -28,7 +28,7 @@ pub fn utargs() -> ArgMatches<'static,> {
         )
         .arg(
             Arg::with_name("ng",)
-                .display_order(24,)
+                .display_order(26,)
                 .help("No Zulu timezone: suppress 0-offset result if others given",)
                 .long("zulu",)
                 .short("z",)
@@ -51,6 +51,15 @@ pub fn utargs() -> ArgMatches<'static,> {
                 .long("input",)
                 .allow_hyphen_values(true)
                 .value_name("FILE",),
+        )
+        .arg(
+            Arg::with_name("annot",)
+                .display_order(24,)
+                .conflicts_with("csv",)
+                .help("Annotate result",)
+                .short("a",)
+                .long("annot",)
+                .takes_value(false,),
         )
         .arg(
             Arg::with_name("headers",)
