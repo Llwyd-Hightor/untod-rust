@@ -28,6 +28,7 @@ pub enum TodCalc {
     FromDateTime,
     FromPMC,
     FromUnix,
+    FromCsec,
 }
 
 /// Defines type of padding for input TOD Clock values
@@ -106,6 +107,9 @@ impl TodInfo {
         }
         if cmdl.is_present("unix",) {
             todwork.runtype = TodCalc::FromUnix;
+        }
+        if cmdl.is_present("csec",) {
+            todwork.runtype = TodCalc::FromCsec;
         }
         if cmdl.is_present("pmc",) {
             todwork.runtype = TodCalc::FromPMC;
@@ -282,10 +286,10 @@ impl UnixSecondsClock {
         }
 
     /// Makes a USC from a decimal string
-    pub fn new_from_decimal(dec: &str) -> UnixSecondsClock {
+    pub fn new_from_decimal(dec: &str, offset: &i64) -> UnixSecondsClock {
         let uval: Result<i64, ParseIntError> = dec.parse();
         match uval {
-            Ok(n,) => UnixSecondsClock(Some(n,),),
+            Ok(n,) => UnixSecondsClock(Some(n-offset,),),
             _ => UnixSecondsClock(None,),
             }
         }
@@ -485,7 +489,7 @@ pub fn from_perpetual(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
             None => {},
             Some(x,) => {
                 todwork.tod =
-                    Tod((zsec as i64 + x - todwork.lsec - todwork.tai) as u64 * 1_000_000 + zmic,);
+                    Tod((zsec as i64 + x + todwork.lsec + todwork.tai) as u64 * 1_000_000 + zmic,);
                 result.push(todwork.text(off,),);
             },
         };
@@ -495,10 +499,15 @@ pub fn from_perpetual(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
 
 /// Uses a Unix Seconds Clock value to calculate the
 /// others,  with up to three different time zone offsets
-pub fn from_unix(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
+pub fn from_unix(a: &str, todwork: &mut TodInfo, csec: &bool) -> Vec<String,> {
     let unixbase = NaiveDate::from_ymd(1970, 1, 1,).and_hms(0, 0, 0,);
+    let csecbase = NaiveDate::from_ymd(1900, 1, 1,).and_hms(0, 0, 0,);
+    let mut csecoff = 0 ;
+    if *csec {
+        csecoff = unixbase.signed_duration_since(csecbase).num_seconds() ;
+    };
     let mut result: Vec<String,> = Vec::new();
-    todwork.usc = UnixSecondsClock::new_from_decimal(a);
+    todwork.usc = UnixSecondsClock::new_from_decimal(a,&csecoff);
     let tusc = match todwork.usc.0 {
         None => {
             result.push(format!("Seconds value is invalid: {:?}", a),);
@@ -522,7 +531,7 @@ pub fn from_unix(a: &str, todwork: &mut TodInfo,) -> Vec<String,> {
             None => {},
             Some(x,) => {
                 todwork.tod =
-                    Tod((zsec as i64 + x - todwork.lsec - todwork.tai) as u64 * 1_000_000 + zmic,);
+                    Tod((zsec as i64 + x + todwork.lsec + todwork.tai) as u64 * 1_000_000 + zmic,);
                 result.push(todwork.text(off,),);
             },
         };
